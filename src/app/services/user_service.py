@@ -1,4 +1,5 @@
 import jwt
+import uuid
 from datetime import datetime
 from fastapi import HTTPException, status
 from core.config import SECRET_KEY, ALGORITHM
@@ -42,14 +43,53 @@ class AuthService:
                 detail="Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администрацией."
             )
 
-        payload = {"user_id": user.id, "role": user.role.value}
+        jti = str(uuid.uuid4())
+        payload = {"user_id": user.id, "role": user.role.value, "jti": jti}
         access_token = create_access_token(payload)
         refresh_token = create_refresh_token(payload)
 
-        # In a real app, we'd save the refresh token to the DB here
+        # Save refresh token to DB
+        await UserRepository.save_refresh_token(user.id, jti, session)
         
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user": UserShortResponse.model_validate(user)
         }
+
+    @staticmethod
+    async def refresh_token(old_refresh_token: str, session: AsyncSession):
+        from helpers.auth import decode_token
+        payload = decode_token(old_refresh_token)
+        if not payload or payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Неверный токен обновления")
+        
+        user_id = payload.get("user_id")
+        jti = payload.get("jti")
+        
+        valid_token = await UserRepository.get_valid_refresh_token(jti, user_id, session)
+        if not valid_token:
+            raise HTTPException(status_code=401, detail="Сессия истекла или отозвана")
+        
+        # Revoke old token (rotation)
+        await UserRepository.revoke_refresh_token(jti, session)
+        
+        # Issue new pair
+        new_jti = str(uuid.uuid4())
+        new_payload = {"user_id": user_id, "role": payload.get("role"), "jti": new_jti}
+        
+        new_access_token = create_access_token(new_payload)
+        new_refresh_token = create_refresh_token(new_payload)
+        
+        await UserRepository.save_refresh_token(user_id, new_jti, session)
+        
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token
+        }
+
+    @staticmethod
+    async def logout(current_user_id: int, refresh_token_jti: str, session: AsyncSession):
+        # We need the JTI from the token being used/cleared
+        await UserRepository.revoke_refresh_token(refresh_token_jti, session)
+        return {"status": "ok"}

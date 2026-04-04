@@ -73,3 +73,30 @@ class UserRepository:
             await session.commit()
             await session.refresh(user)
         return user
+
+    @staticmethod
+    async def save_refresh_token(user_id: int, jti: str, session: AsyncSession):
+        token = IssuedJWTToken(user_id=user_id, jti=jti)
+        session.add(token)
+        await session.commit()
+        return token
+
+    @staticmethod
+    async def revoke_refresh_token(jti: str, session: AsyncSession):
+        stmt = select(IssuedJWTToken).where(IssuedJWTToken.jti == jti)
+        result = await session.execute(stmt)
+        token = result.scalar_one_or_none()
+        if token:
+            token.revoked = True
+            await session.commit()
+        return token
+
+    @staticmethod
+    async def get_valid_refresh_token(jti: str, user_id: int, session: AsyncSession):
+        stmt = select(IssuedJWTToken).where(
+            IssuedJWTToken.jti == jti,
+            IssuedJWTToken.user_id == user_id,
+            IssuedJWTToken.revoked == False
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()

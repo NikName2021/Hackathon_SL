@@ -16,10 +16,29 @@ class CategoryCreate(BaseModel):
 
 class UserShortResponse(BaseModel):
     id: int
-    full_name: str | None
     email: str
+    full_name: str | None
     role: Role
+    points: int
+    reputation: float
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserResponse(UserShortResponse):
+    is_active: bool
+    created_date: datetime
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AuthResponse(BaseModel):
+    user: UserShortResponse
+    token: Token
+    status: str = "success"
 
 
 class TaskCreate(BaseModel):

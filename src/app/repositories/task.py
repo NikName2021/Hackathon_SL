@@ -38,6 +38,13 @@ class TaskRepository:
         await session.refresh(task)
         return task
 
+    @staticmethod
+    async def update_status(task_id: int, status: TaskStatus, session: AsyncSession) -> Task | None:
+        task = await TaskRepository.get_by_id(task_id, session)
+        if task:
+            task.status = status
+            await session.commit()
+            await session.refresh(task)
         return task
 
     @staticmethod
@@ -65,6 +72,15 @@ class ApplicationRepository:
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
+    @staticmethod
+    async def get_by_task_and_student(task_id: int, student_id: int, session: AsyncSession) -> TaskApplication | None:
+        stmt = select(TaskApplication).where(TaskApplication.task_id == task_id, TaskApplication.student_id == student_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def update_status(app_id: int, status: ApplicationStatus, session: AsyncSession) -> TaskApplication | None:
+        app = await ApplicationRepository.get_by_id(app_id, session)
         if app:
             app.status = status
             await session.commit()

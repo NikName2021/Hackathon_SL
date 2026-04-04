@@ -56,6 +56,8 @@ async def async_get_db() -> AsyncGenerator[AsyncSession, None]:
 # )
 # logger.configure(handlers=[{"sink": sys.stderr, "level": LOGGING_LEVEL}])
 
+import os
+os.makedirs("logs", exist_ok=True)
 dictConfig(logging_config)
 
 # Создаем экземпляр логгера для нашего модуля

@@ -17,16 +17,41 @@ class TaskCreateDTO(BaseModel):
 
 class TaskRepository:
     @staticmethod
-    async def get_all(session: AsyncSession, status: TaskStatus = TaskStatus.OPEN, category_id: int | None = None):
-        stmt = select(Task).where(Task.status == status).options(selectinload(Task.owner), selectinload(Task.category))
+    async def get_all(session: AsyncSession, status: TaskStatus | None = TaskStatus.OPEN, category_id: int | None = None):
+        stmt = select(Task).options(selectinload(Task.owner), selectinload(Task.category))
+        if status:
+            stmt = stmt.where(Task.status == status)
         if category_id:
             stmt = stmt.where(Task.category_id == category_id)
         result = await session.execute(stmt)
         return result.scalars().all()
 
     @staticmethod
+    async def get_by_owner(owner_id: int, session: AsyncSession):
+        stmt = select(Task).where(Task.owner_id == owner_id).options(
+            selectinload(Task.category), 
+            selectinload(Task.applications),
+            selectinload(Task.submissions)
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
+
+    @staticmethod
+    async def get_by_student(student_id: int, session: AsyncSession):
+        stmt = select(Task).join(TaskApplication).where(
+            TaskApplication.student_id == student_id,
+            TaskApplication.status == ApplicationStatus.ACCEPTED
+        ).options(selectinload(Task.owner), selectinload(Task.category))
+        result = await session.execute(stmt)
+        return result.scalars().all()
+
+    @staticmethod
     async def get_by_id(task_id: int, session: AsyncSession) -> Task | None:
-        stmt = select(Task).where(Task.id == task_id).options(selectinload(Task.owner), selectinload(Task.applications))
+        stmt = select(Task).where(Task.id == task_id).options(
+            selectinload(Task.owner), 
+            selectinload(Task.applications),
+            selectinload(Task.submissions)
+        )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -77,6 +102,15 @@ class ApplicationRepository:
         stmt = select(TaskApplication).where(TaskApplication.task_id == task_id, TaskApplication.student_id == student_id)
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_pending_for_owner(owner_id: int, session: AsyncSession):
+        stmt = select(TaskApplication).join(Task).where(
+            Task.owner_id == owner_id,
+            TaskApplication.status == ApplicationStatus.PENDING
+        ).options(selectinload(TaskApplication.student), selectinload(TaskApplication.task))
+        result = await session.execute(stmt)
+        return result.scalars().all()
 
     @staticmethod
     async def update_status(app_id: int, status: ApplicationStatus, session: AsyncSession) -> TaskApplication | None:

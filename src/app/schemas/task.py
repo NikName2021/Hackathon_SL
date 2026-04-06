@@ -49,6 +49,17 @@ class TaskCreate(BaseModel):
     deadline: datetime | None = None
 
 
+class SubmissionResponse(BaseModel):
+    id: int
+    task_id: int
+    student_id: int
+    content: str
+    status: str
+    submitted_at: datetime
+    feedback: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TaskResponse(BaseModel):
     id: int
     title: str
@@ -59,7 +70,17 @@ class TaskResponse(BaseModel):
     created_date: datetime
     owner: UserShortResponse
     category: CategoryResponse | None = None
+    latest_submission: Optional[SubmissionResponse] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class DashboardStats(BaseModel):
+    active_tasks: int = 0
+    pending_reviews: int = 0
+    completed_tasks: int = 0
+    total_points: int = 0
+    pending_applications: int = 0
+    pending_moderation: int = 0
 
 
 class ApplicationCreate(BaseModel):
@@ -78,17 +99,6 @@ class ApplicationResponse(BaseModel):
 
 class SubmissionCreate(BaseModel):
     content: str
-
-
-class SubmissionResponse(BaseModel):
-    id: int
-    task_id: int
-    student_id: int
-    content: str
-    status: str
-    submitted_at: datetime
-    feedback: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 
 class TaskReview(BaseModel):

@@ -7,17 +7,18 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.config import pwd_context, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, async_get_db, security, \
+from core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, async_get_db, security, \
     REFRESH_TOKEN_EXPIRE_DAYS
-from database import User, Role
+import bcrypt
+from database.all_models import User, Role
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -87,9 +88,12 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: User = Depends(get_current_user)) -> User:
-        if user.role not in self.allowed_roles:
+        allowed_values = [r.value if hasattr(r, 'value') else r for r in self.allowed_roles]
+        user_role_value = user.role.value if hasattr(user.role, 'value') else user.role
+        
+        if user_role_value not in allowed_values:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Доступ запрещён. Требуется роль: {[r.value for r in self.allowed_roles]}"
+                detail=f"Доступ запрещён. Требуется роль: {allowed_values}. Ваша роль: {user_role_value}"
             )
         return user

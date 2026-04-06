@@ -31,6 +31,21 @@ class TaskService:
         return await TaskRepository.get_all(session, status=TaskStatus.OPEN, category_id=category_id)
 
     @staticmethod
+    async def get_my_tasks(user_id: int, role: Role, session: AsyncSession):
+        if role == Role.STUDENT:
+            return await TaskRepository.get_by_student(user_id, session)
+        else:
+            return await TaskRepository.get_by_owner(user_id, session)
+
+    @staticmethod
+    async def get_incoming_applications(user_id: int, session: AsyncSession):
+        return await ApplicationRepository.get_pending_for_owner(user_id, session)
+
+    @staticmethod
+    async def get_tasks_for_moderation(session: AsyncSession):
+        return await TaskRepository.get_all(session, status=TaskStatus.PENDING_APPROVAL)
+
+    @staticmethod
     async def apply_for_task(task_id: int, student_id: int, app_data: ApplicationCreate, session: AsyncSession):
         task = await TaskRepository.get_by_id(task_id, session)
         if not task:

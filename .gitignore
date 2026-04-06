@@ -20,3 +20,4 @@ spa/package-lock.json
 ./src/logs/*
 /src/logs/app.log
 /src/logs/app_logs.json
+/src/.env

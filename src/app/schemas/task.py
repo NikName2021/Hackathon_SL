@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
 
@@ -10,7 +10,7 @@ from database.all_models import ApplicationStatus, Role, TaskStatus
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def _task_stub(task_id: int = 0, *, status: TaskStatus = TaskStatus.OPEN) -> SimpleNamespace:

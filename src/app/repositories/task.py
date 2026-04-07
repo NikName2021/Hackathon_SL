@@ -32,6 +32,34 @@ APPLICATION_LOAD_OPTIONS = (
 )
 
 
+async def _fetch_one(session: AsyncSession, stmt):
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def _fetch_all(session: AsyncSession, stmt):
+    result = await session.execute(stmt)
+    return result.unique().scalars().all()
+
+
+async def _reject_pending_applications(
+    task_id: int,
+    *,
+    except_app_id: int,
+    session: AsyncSession,
+):
+    stmt = select(TaskApplication).where(
+        TaskApplication.task_id == task_id,
+        TaskApplication.id != except_app_id,
+        TaskApplication.status == ApplicationStatus.PENDING,
+    )
+    result = await session.execute(stmt)
+    applications = result.scalars().all()
+    for application in applications:
+        application.status = ApplicationStatus.REJECTED
+    await session.commit()
+
+
 class TaskCreateDTO(BaseModel):
     title: str
     description: str | None = None
@@ -53,14 +81,12 @@ class TaskRepository:
             stmt = stmt.where(Task.status == status)
         if category_id:
             stmt = stmt.where(Task.category_id == category_id)
-        result = await session.execute(stmt)
-        return result.unique().scalars().all()
+        return await _fetch_all(session, stmt)
 
     @staticmethod
     async def get_by_owner(owner_id: int, session: AsyncSession):
         stmt = select(Task).where(Task.owner_id == owner_id).options(*TASK_LOAD_OPTIONS)
-        result = await session.execute(stmt)
-        return result.unique().scalars().all()
+        return await _fetch_all(session, stmt)
 
     @staticmethod
     async def get_by_student(student_id: int, session: AsyncSession):
@@ -78,14 +104,12 @@ class TaskRepository:
             )
             .options(*TASK_LOAD_OPTIONS)
         )
-        result = await session.execute(stmt)
-        return result.unique().scalars().all()
+        return await _fetch_all(session, stmt)
 
     @staticmethod
     async def get_by_id(task_id: int, session: AsyncSession) -> Task | None:
         stmt = select(Task).where(Task.id == task_id).options(*TASK_LOAD_OPTIONS)
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none()
+        return await _fetch_one(session, stmt)
 
     @staticmethod
     async def create(task_data: TaskCreateDTO, session: AsyncSession) -> Task:
@@ -114,16 +138,7 @@ class TaskRepository:
 
     @staticmethod
     async def reject_pending_applications_for_task(task_id: int, except_app_id: int, session: AsyncSession):
-        stmt = select(TaskApplication).where(
-            TaskApplication.task_id == task_id,
-            TaskApplication.id != except_app_id,
-            TaskApplication.status == ApplicationStatus.PENDING,
-        )
-        result = await session.execute(stmt)
-        applications = result.scalars().all()
-        for application in applications:
-            application.status = ApplicationStatus.REJECTED
-        await session.commit()
+        await _reject_pending_applications(task_id, except_app_id=except_app_id, session=session)
 
     @staticmethod
     async def cancel_all_by_owner(owner_id: int, session: AsyncSession):
@@ -146,8 +161,7 @@ class ApplicationRepository:
     @staticmethod
     async def get_by_id(app_id: int, session: AsyncSession) -> TaskApplication | None:
         stmt = select(TaskApplication).where(TaskApplication.id == app_id).options(*APPLICATION_LOAD_OPTIONS)
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none()
+        return await _fetch_one(session, stmt)
 
     @staticmethod
     async def get_by_task_and_student(task_id: int, student_id: int, session: AsyncSession) -> TaskApplication | None:
@@ -156,8 +170,7 @@ class ApplicationRepository:
             .where(TaskApplication.task_id == task_id, TaskApplication.student_id == student_id)
             .options(*APPLICATION_LOAD_OPTIONS)
         )
-        result = await session.execute(stmt)
-        return result.scalar_one_or_none()
+        return await _fetch_one(session, stmt)
 
     @staticmethod
     async def get_pending_for_owner(owner_id: int, session: AsyncSession):
@@ -167,8 +180,7 @@ class ApplicationRepository:
             .where(Task.owner_id == owner_id, TaskApplication.status == ApplicationStatus.PENDING)
             .options(*APPLICATION_LOAD_OPTIONS)
         )
-        result = await session.execute(stmt)
-        return result.unique().scalars().all()
+        return await _fetch_all(session, stmt)
 
     @staticmethod
     async def update_status(app_id: int, status: ApplicationStatus, session: AsyncSession) -> TaskApplication | None:
@@ -193,16 +205,7 @@ class ApplicationRepository:
 
     @staticmethod
     async def reject_pending_for_task_except(task_id: int, approved_app_id: int, session: AsyncSession):
-        stmt = select(TaskApplication).where(
-            TaskApplication.task_id == task_id,
-            TaskApplication.id != approved_app_id,
-            TaskApplication.status == ApplicationStatus.PENDING,
-        )
-        result = await session.execute(stmt)
-        applications = result.scalars().all()
-        for application in applications:
-            application.status = ApplicationStatus.REJECTED
-        await session.commit()
+        await _reject_pending_applications(task_id, except_app_id=approved_app_id, session=session)
 
 
 class SubmissionRepository:

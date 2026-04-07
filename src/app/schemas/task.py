@@ -13,6 +13,33 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def _task_stub(task_id: int = 0, *, status: TaskStatus = TaskStatus.OPEN) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=task_id,
+        title="",
+        description=None,
+        status=status,
+        points_reward=0,
+        deadline=None,
+        created_date=utcnow(),
+        owner=None,
+        assignee=None,
+        category=None,
+        submissions=[],
+    )
+
+
+def _resolve_task(task: Any | None) -> Any:
+    return task if task is not None else _task_stub()
+
+
+def _resolve_latest_submission(task: Any | None) -> Any | None:
+    submissions = getattr(task, "submissions", None) or []
+    if not submissions:
+        return None
+    return max(submissions, key=lambda item: item.submitted_at)
+
+
 class CategoryResponse(BaseModel):
     id: int
     name: str
@@ -166,23 +193,7 @@ def build_submission_response(submission: Any | None) -> SubmissionResponse | No
 
 
 def build_task_response(task: Any | None) -> TaskResponse:
-    if task is None:
-        task = SimpleNamespace(
-            id=0,
-            title="",
-            description=None,
-            status=TaskStatus.OPEN,
-            points_reward=0,
-            deadline=None,
-            created_date=utcnow(),
-            owner=None,
-            assignee=None,
-            category=None,
-            submissions=[],
-        )
-
-    submissions = getattr(task, "submissions", None) or []
-    latest_submission = max(submissions, key=lambda item: item.submitted_at) if submissions else None
+    task = _resolve_task(task)
 
     return TaskResponse(
         id=task.id,
@@ -195,26 +206,14 @@ def build_task_response(task: Any | None) -> TaskResponse:
         owner=build_user_short_response(getattr(task, "owner", None)),
         assignee=build_user_short_response(getattr(task, "assignee", None)) if getattr(task, "assignee", None) else None,
         category=build_category_response(getattr(task, "category", None)),
-        latest_submission=build_submission_response(latest_submission),
+        latest_submission=build_submission_response(_resolve_latest_submission(task)),
     )
 
 
 def build_application_response(application: Any) -> ApplicationResponse:
     task = getattr(application, "task", None)
     if task is None:
-        task = SimpleNamespace(
-            id=application.task_id,
-            title="",
-            description=None,
-            status=TaskStatus.OPEN,
-            points_reward=0,
-            deadline=None,
-            created_date=utcnow(),
-            owner=None,
-            assignee=None,
-            category=None,
-            submissions=[],
-        )
+        task = _task_stub(application.task_id)
 
     return ApplicationResponse(
         id=application.id,

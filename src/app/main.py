@@ -1,6 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
+from fastapi.staticfiles import StaticFiles
+from swagger_ui_bundle import swagger_ui_3_path
 
 from api.routes.api import router as api_router
 from core.config import API_PREFIX, DEBUG, PROJECT_NAME, VERSION, MEMOIZATION_FLAG, HOST, PORT
@@ -18,8 +21,9 @@ origins = [
 
 
 def get_application() -> FastAPI:
-    application = FastAPI(title=PROJECT_NAME, debug=DEBUG, version=VERSION)
+    application = FastAPI(title=PROJECT_NAME, debug=DEBUG, version=VERSION, docs_url=None, redoc_url=None)
     application.include_router(api_router, prefix=API_PREFIX)
+    application.mount("/swagger-static", StaticFiles(directory=swagger_ui_3_path), name="swagger-static")
     application.add_middleware(LoggingMiddleware)
     application.add_middleware(
         CORSMiddleware,
@@ -31,6 +35,21 @@ def get_application() -> FastAPI:
 
     if MEMOIZATION_FLAG:
         application.add_event_handler("startup", create_start_app_handler(application))
+
+    @application.get("/docs", include_in_schema=False)
+    async def custom_swagger_ui_html():
+        return get_swagger_ui_html(
+            openapi_url=application.openapi_url,
+            title=f"{PROJECT_NAME} - Swagger UI",
+            oauth2_redirect_url="/docs/oauth2-redirect",
+            swagger_js_url="/swagger-static/swagger-ui-bundle.js",
+            swagger_css_url="/swagger-static/swagger-ui.css",
+        )
+
+    @application.get("/docs/oauth2-redirect", include_in_schema=False)
+    async def swagger_ui_redirect():
+        return get_swagger_ui_oauth2_redirect_html()
+
     return application
 
 

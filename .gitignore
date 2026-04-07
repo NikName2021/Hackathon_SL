@@ -30,3 +30,4 @@ __pycache__/
 .run/
 .pytest_cache/
 src/pytest-cache-files-*/
+logs/

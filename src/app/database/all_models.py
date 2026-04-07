@@ -2,7 +2,7 @@ import datetime
 from enum import Enum
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, Float, Enum as SQLAlchemyEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, Float, Enum as SQLAlchemyEnum, text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -69,12 +69,14 @@ class Task(DeclBase):
     description = Column(String)
     category_id = Column(Integer, ForeignKey("category.id"))
     owner_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    assignee_id = Column(Integer, ForeignKey("user.id"), nullable=True)
     status = Column(SQLAlchemyEnum(TaskStatus), default=TaskStatus.OPEN)
     points_reward = Column(Integer, default=0)
     deadline = Column(DateTime)
     created_date = Column(DateTime, default=datetime.datetime.now)
 
     owner = relationship("User", back_populates="created_tasks", foreign_keys=[owner_id])
+    assignee = relationship("User", foreign_keys=[assignee_id])
     category = relationship("Category", back_populates="tasks")
     applications = relationship("TaskApplication", back_populates="task")
     submissions = relationship("TaskSubmission", back_populates="task")
@@ -135,3 +137,6 @@ class IssuedJWTToken(DeclBase):
 async def create_tables(engine: AsyncEngine):
     async with engine.begin() as conn:
         await conn.run_sync(DeclBase.metadata.create_all)
+        await conn.execute(
+            text('ALTER TABLE task ADD COLUMN IF NOT EXISTS assignee_id INTEGER REFERENCES "user"(id)')
+        )

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,6 +17,7 @@ from database.all_models import (
 
 TASK_LOAD_OPTIONS = (
     selectinload(Task.owner),
+    selectinload(Task.assignee),
     selectinload(Task.category),
     selectinload(Task.applications).selectinload(TaskApplication.student),
     selectinload(Task.submissions),
@@ -25,6 +26,7 @@ TASK_LOAD_OPTIONS = (
 APPLICATION_LOAD_OPTIONS = (
     selectinload(TaskApplication.student),
     selectinload(TaskApplication.task).selectinload(Task.owner),
+    selectinload(TaskApplication.task).selectinload(Task.assignee),
     selectinload(TaskApplication.task).selectinload(Task.category),
     selectinload(TaskApplication.task).selectinload(Task.submissions),
 )
@@ -64,10 +66,15 @@ class TaskRepository:
     async def get_by_student(student_id: int, session: AsyncSession):
         stmt = (
             select(Task)
-            .join(TaskApplication)
+            .outerjoin(TaskApplication)
             .where(
-                TaskApplication.student_id == student_id,
-                TaskApplication.status == ApplicationStatus.ACCEPTED,
+                or_(
+                    Task.assignee_id == student_id,
+                    and_(
+                        TaskApplication.student_id == student_id,
+                        TaskApplication.status == ApplicationStatus.ACCEPTED,
+                    ),
+                )
             )
             .options(*TASK_LOAD_OPTIONS)
         )
@@ -95,6 +102,28 @@ class TaskRepository:
             await session.commit()
             return await TaskRepository.get_by_id(task_id, session)
         return None
+
+    @staticmethod
+    async def assign_student(task_id: int, student_id: int | None, session: AsyncSession) -> Task | None:
+        task = await TaskRepository.get_by_id(task_id, session)
+        if task:
+            task.assignee_id = student_id
+            await session.commit()
+            return await TaskRepository.get_by_id(task_id, session)
+        return None
+
+    @staticmethod
+    async def reject_pending_applications_for_task(task_id: int, except_app_id: int, session: AsyncSession):
+        stmt = select(TaskApplication).where(
+            TaskApplication.task_id == task_id,
+            TaskApplication.id != except_app_id,
+            TaskApplication.status == ApplicationStatus.PENDING,
+        )
+        result = await session.execute(stmt)
+        applications = result.scalars().all()
+        for application in applications:
+            application.status = ApplicationStatus.REJECTED
+        await session.commit()
 
     @staticmethod
     async def cancel_all_by_owner(owner_id: int, session: AsyncSession):
@@ -160,6 +189,19 @@ class ApplicationRepository:
         apps = result.scalars().all()
         for app in apps:
             app.status = ApplicationStatus.REJECTED
+        await session.commit()
+
+    @staticmethod
+    async def reject_pending_for_task_except(task_id: int, approved_app_id: int, session: AsyncSession):
+        stmt = select(TaskApplication).where(
+            TaskApplication.task_id == task_id,
+            TaskApplication.id != approved_app_id,
+            TaskApplication.status == ApplicationStatus.PENDING,
+        )
+        result = await session.execute(stmt)
+        applications = result.scalars().all()
+        for application in applications:
+            application.status = ApplicationStatus.REJECTED
         await session.commit()
 
 

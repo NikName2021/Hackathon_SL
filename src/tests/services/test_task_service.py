@@ -1,11 +1,13 @@
-import pytest
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.all_models import ApplicationStatus, Task, TaskApplication, TaskStatus, TaskSubmission
+from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, TaskReview, build_task_response
 from services.task_service import TaskService
-from schemas.task import TaskCreate, ApplicationCreate, SubmissionCreate, TaskReview
-from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus
 
 @pytest.fixture
 def mock_task():
@@ -29,6 +31,20 @@ def mock_application():
         message="I can do it"
     )
 
+
+@pytest.fixture
+def mock_accepted_application(mock_task):
+    application = TaskApplication(
+        id=1,
+        task_id=mock_task.id,
+        student_id=1,
+        status=ApplicationStatus.ACCEPTED,
+        message="I can do it",
+    )
+    application.task = mock_task
+    application.student = None
+    return application
+
 @pytest.mark.asyncio
 async def test_create_task(mock_db_session, mock_task):
     task_data = TaskCreate(title="Test Task", description="Desc", category_id=1, points_reward=10)
@@ -47,12 +63,85 @@ async def test_create_task(mock_db_session, mock_task):
 
 @pytest.mark.asyncio
 async def test_approve_task(mock_db_session, mock_task):
-    with patch("repositories.task.TaskRepository.update_status", new_callable=AsyncMock) as mock_update:
-        mock_task.status = TaskStatus.OPEN
-        mock_update.return_value = mock_task
-        
-        result = await TaskService.approve_task(1, mock_db_session)
-        assert result.status == TaskStatus.OPEN
+    with patch("repositories.task.TaskRepository.get_by_id", new_callable=AsyncMock) as mock_get:
+        mock_task.status = TaskStatus.PENDING_APPROVAL
+        mock_get.return_value = mock_task
+        with patch("repositories.task.TaskRepository.update_status", new_callable=AsyncMock) as mock_update:
+            updated_task = Task(
+                id=mock_task.id,
+                title=mock_task.title,
+                description=mock_task.description,
+                category_id=mock_task.category_id,
+                owner_id=mock_task.owner_id,
+                status=TaskStatus.OPEN,
+                points_reward=mock_task.points_reward,
+            )
+            mock_update.return_value = updated_task
+
+            result = await TaskService.approve_task(1, mock_db_session)
+            assert result.status == TaskStatus.OPEN
+
+
+@pytest.mark.asyncio
+async def test_approve_student_assigns_executor_and_rejects_rest(mock_db_session, mock_task, mock_application):
+    mock_task.status = TaskStatus.OPEN
+    mock_task.applications = [mock_application]
+    mock_application.task = mock_task
+    accepted_application = TaskApplication(
+        id=1,
+        task_id=1,
+        student_id=1,
+        status=ApplicationStatus.ACCEPTED,
+        message="I can do it",
+    )
+    accepted_application.task = mock_task
+    accepted_application.student = None
+
+    with patch("repositories.task.ApplicationRepository.get_by_id", new_callable=AsyncMock) as mock_get_app:
+        mock_get_app.side_effect = [mock_application, accepted_application]
+        with patch("repositories.task.TaskRepository.get_by_id", new_callable=AsyncMock) as mock_get_task:
+            mock_get_task.return_value = mock_task
+            with patch("repositories.task.ApplicationRepository.update_status", new_callable=AsyncMock) as mock_update_app:
+                with patch("repositories.task.TaskRepository.assign_student", new_callable=AsyncMock) as mock_assign:
+                    with patch("repositories.task.ApplicationRepository.reject_pending_for_task_except", new_callable=AsyncMock) as mock_reject:
+                        with patch("repositories.task.TaskRepository.update_status", new_callable=AsyncMock) as mock_update_task:
+                            mock_update_app.return_value = mock_application
+                            mock_update_task.return_value = mock_task
+
+                            result = await TaskService.approve_student(1, 2, mock_db_session)
+
+                            assert result.status == ApplicationStatus.ACCEPTED
+                            mock_assign.assert_awaited_once_with(1, 1, mock_db_session)
+                            mock_reject.assert_awaited_once_with(1, 1, mock_db_session)
+                            mock_update_app.assert_awaited_once_with(1, ApplicationStatus.ACCEPTED, mock_db_session)
+                            mock_update_task.assert_awaited_once_with(1, TaskStatus.IN_PROGRESS, mock_db_session)
+
+
+@pytest.mark.asyncio
+async def test_build_task_response_uses_latest_submission(mock_task):
+    older = TaskSubmission(
+        id=1,
+        task_id=mock_task.id,
+        student_id=1,
+        content="old",
+        status="reviewing",
+        submitted_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    newer = TaskSubmission(
+        id=2,
+        task_id=mock_task.id,
+        student_id=1,
+        content="new",
+        status="approved",
+        submitted_at=datetime.now(UTC),
+    )
+    mock_task.submissions = [older, newer]
+
+    result = build_task_response(mock_task)
+
+    assert result.latest_submission is not None
+    assert result.latest_submission.id == 2
+    assert result.latest_submission.status == "approved"
 
 @pytest.mark.asyncio
 async def test_apply_for_task_success(mock_db_session, mock_task, mock_application, mock_student_user):
@@ -69,8 +158,9 @@ async def test_apply_for_task_success(mock_db_session, mock_task, mock_applicati
                 mock_create_app.return_value = mock_application
                 
                 result = await TaskService.apply_for_task(1, 1, app_data, mock_db_session)
-                
+
                 assert result.status == ApplicationStatus.PENDING
+                assert result.task.id == mock_task.id
 
 @pytest.mark.asyncio
 async def test_apply_for_task_already_applied(mock_db_session, mock_task, mock_application):

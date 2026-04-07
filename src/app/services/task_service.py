@@ -12,15 +12,20 @@ from repositories.task import (
 from repositories.user import UserRepository
 from schemas.task import (
     ApplicationCreate,
+    SubmissionCreate,
     TaskCreate,
     TaskReview,
-    SubmissionCreate,
     build_application_response,
     build_task_response,
 )
 
 
 class TaskService:
+    @staticmethod
+    def _ensure_status(task, allowed_statuses: set[TaskStatus], detail: str) -> None:
+        if task.status not in allowed_statuses:
+            raise HTTPException(status_code=400, detail=detail)
+
     @staticmethod
     async def create_task(task_data: TaskCreate, owner_id: int, session: AsyncSession):
         dto = TaskCreateDTO(**task_data.model_dump(), owner_id=owner_id)
@@ -31,17 +36,27 @@ class TaskService:
 
     @staticmethod
     async def approve_task(task_id: int, session: AsyncSession):
-        task = await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
+        task = await TaskRepository.get_by_id(task_id, session)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
-        return build_task_response(task)
+
+        TaskService._ensure_status(task, {TaskStatus.PENDING_APPROVAL}, "Only pending tasks can be approved")
+        updated_task = await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
+        return build_task_response(updated_task)
 
     @staticmethod
     async def reject_task(task_id: int, session: AsyncSession):
-        task = await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session)
+        task = await TaskRepository.get_by_id(task_id, session)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
-        return build_task_response(task)
+
+        TaskService._ensure_status(
+            task,
+            {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN},
+            "Task cannot be rejected in its current status",
+        )
+        updated_task = await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session)
+        return build_task_response(updated_task)
 
     @staticmethod
     async def get_available_tasks(session: AsyncSession, category_id: int | None = None):
@@ -59,7 +74,7 @@ class TaskService:
     @staticmethod
     async def get_incoming_applications(user_id: int, session: AsyncSession):
         applications = await ApplicationRepository.get_pending_for_owner(user_id, session)
-        return [build_application_response(app) for app in applications]
+        return [build_application_response(application) for application in applications]
 
     @staticmethod
     async def get_tasks_for_moderation(session: AsyncSession):
@@ -97,7 +112,15 @@ class TaskService:
         if task.owner_id != owner_id:
             raise HTTPException(status_code=403, detail="Only the task owner can approve an application")
 
+        TaskService._ensure_status(task, {TaskStatus.OPEN}, "Student can be assigned only to an open task")
+        if task.assignee_id is not None:
+            raise HTTPException(status_code=400, detail="Task already has an assigned student")
+        if application.status != ApplicationStatus.PENDING:
+            raise HTTPException(status_code=400, detail="Only pending applications can be approved")
+
         await ApplicationRepository.update_status(app_id, ApplicationStatus.ACCEPTED, session)
+        await ApplicationRepository.reject_pending_for_task_except(task.id, app_id, session)
+        await TaskRepository.assign_student(task.id, application.student_id, session)
         await TaskRepository.update_status(task.id, TaskStatus.IN_PROGRESS, session)
 
         updated_application = await ApplicationRepository.get_by_id(app_id, session)
@@ -109,11 +132,8 @@ class TaskService:
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
 
-        assigned = any(
-            app.student_id == student_id and app.status == ApplicationStatus.ACCEPTED
-            for app in task.applications
-        )
-        if not assigned:
+        TaskService._ensure_status(task, {TaskStatus.IN_PROGRESS}, "Task can be submitted only when it is in progress")
+        if task.assignee_id != student_id:
             raise HTTPException(status_code=403, detail="Only the selected student can submit this task")
 
         submission = await SubmissionRepository.create(task_id, student_id, submission_data.content, session)
@@ -129,9 +149,14 @@ class TaskService:
         if task.owner_id != owner_id:
             raise HTTPException(status_code=403, detail="Only the task owner can review the submission")
 
+        TaskService._ensure_status(task, {TaskStatus.REVIEW}, "Task review is available only after submission")
+
         submission = await SubmissionRepository.get_by_task_id(task_id, session)
         if not submission:
             raise HTTPException(status_code=404, detail="Submission not found")
+
+        if task.assignee_id is None:
+            raise HTTPException(status_code=400, detail="Task does not have an assigned student")
 
         if review_data.is_approved:
             await SubmissionRepository.update_review(submission.id, "approved", review_data.feedback, session)
@@ -159,9 +184,7 @@ class TaskService:
         if task.owner_id != owner_id:
             raise HTTPException(status_code=403, detail="Only the task owner can complete the task")
 
-        if task.status != TaskStatus.REVIEW:
-            raise HTTPException(status_code=400, detail="Task can be completed only after submission review")
-
+        TaskService._ensure_status(task, {TaskStatus.REVIEW}, "Task can be completed only after submission review")
         updated_task = await TaskRepository.update_status(task_id, TaskStatus.COMPLETED, session)
         return build_task_response(updated_task)
 

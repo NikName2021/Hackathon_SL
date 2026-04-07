@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
 import type { Task } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, Clock, FileText, User, MessageCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, FileText, User, MessageCircle, MessageSquare } from 'lucide-react';
+import { ChatComponent } from '@/components/ChatComponent';
 
 export const EmployeeReviews: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<number | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatTask, setChatTask] = useState<Task | null>(null);
 
   const fetchReviews = async () => {
     try {
@@ -129,6 +132,17 @@ export const EmployeeReviews: React.FC = () => {
                       {/* Actions */}
                       <div className="flex flex-row md:flex-col gap-3 justify-end shrink-0 self-center">
                         <Button
+                          onClick={() => {
+                            setChatTask(task);
+                            setIsChatOpen(true);
+                          }}
+                          variant="outline"
+                          leftIcon={<MessageSquare className="w-4 h-4" />}
+                          className="flex-1 md:w-full h-12"
+                        >
+                          Чат
+                        </Button>
+                        <Button
                           onClick={() => handleReview(task.id, true)}
                           isLoading={isProcessing === task.id}
                           variant="primary"
@@ -154,6 +168,14 @@ export const EmployeeReviews: React.FC = () => {
             ))}
           </AnimatePresence>
         </div>
+      )}
+      {chatTask && (
+        <ChatComponent
+          taskId={chatTask.id}
+          taskTitle={chatTask.title}
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+        />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
-from sqlalchemy import and_, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,6 +28,7 @@ APPLICATION_LOAD_OPTIONS = (
     selectinload(TaskApplication.task).selectinload(Task.owner),
     selectinload(TaskApplication.task).selectinload(Task.assignee),
     selectinload(TaskApplication.task).selectinload(Task.category),
+    selectinload(TaskApplication.task).selectinload(Task.applications).selectinload(TaskApplication.student),
     selectinload(TaskApplication.task).selectinload(Task.submissions),
 )
 
@@ -42,12 +43,7 @@ async def _fetch_all(session: AsyncSession, stmt):
     return result.unique().scalars().all()
 
 
-async def _reject_pending_applications(
-    task_id: int,
-    *,
-    except_app_id: int,
-    session: AsyncSession,
-):
+async def _reject_pending_applications(task_id: int, *, except_app_id: int, session: AsyncSession):
     stmt = select(TaskApplication).where(
         TaskApplication.task_id == task_id,
         TaskApplication.id != except_app_id,
@@ -75,17 +71,27 @@ class TaskRepository:
         session: AsyncSession,
         status: TaskStatus | None = TaskStatus.OPEN,
         category_id: int | None = None,
+        exclude_student_id: int | None = None,
     ):
         stmt = select(Task).options(*TASK_LOAD_OPTIONS)
         if status:
             stmt = stmt.where(Task.status == status)
         if category_id:
             stmt = stmt.where(Task.category_id == category_id)
+        if exclude_student_id:
+            subq = select(TaskApplication.task_id).where(TaskApplication.student_id == exclude_student_id)
+            stmt = stmt.where(Task.id.not_in(subq))
+        stmt = stmt.order_by(Task.created_date.desc())
         return await _fetch_all(session, stmt)
 
     @staticmethod
     async def get_by_owner(owner_id: int, session: AsyncSession):
-        stmt = select(Task).where(Task.owner_id == owner_id).options(*TASK_LOAD_OPTIONS)
+        stmt = (
+            select(Task)
+            .where(Task.owner_id == owner_id)
+            .options(*TASK_LOAD_OPTIONS)
+            .order_by(Task.created_date.desc())
+        )
         return await _fetch_all(session, stmt)
 
     @staticmethod
@@ -96,13 +102,11 @@ class TaskRepository:
             .where(
                 or_(
                     Task.assignee_id == student_id,
-                    and_(
-                        TaskApplication.student_id == student_id,
-                        TaskApplication.status == ApplicationStatus.ACCEPTED,
-                    ),
+                    TaskApplication.student_id == student_id,
                 )
             )
             .options(*TASK_LOAD_OPTIONS)
+            .order_by(Task.created_date.desc())
         )
         return await _fetch_all(session, stmt)
 
@@ -119,22 +123,37 @@ class TaskRepository:
         return await TaskRepository.get_by_id(task.id, session)
 
     @staticmethod
+    async def update(task_id: int, update_data: dict, session: AsyncSession) -> Task | None:
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            return None
+
+        for key, value in update_data.items():
+            if value is not None:
+                setattr(task, key, value)
+
+        await session.commit()
+        return await TaskRepository.get_by_id(task_id, session)
+
+    @staticmethod
     async def update_status(task_id: int, status: TaskStatus, session: AsyncSession) -> Task | None:
         task = await TaskRepository.get_by_id(task_id, session)
-        if task:
-            task.status = status
-            await session.commit()
-            return await TaskRepository.get_by_id(task_id, session)
-        return None
+        if not task:
+            return None
+
+        task.status = status
+        await session.commit()
+        return await TaskRepository.get_by_id(task_id, session)
 
     @staticmethod
     async def assign_student(task_id: int, student_id: int | None, session: AsyncSession) -> Task | None:
         task = await TaskRepository.get_by_id(task_id, session)
-        if task:
-            task.assignee_id = student_id
-            await session.commit()
-            return await TaskRepository.get_by_id(task_id, session)
-        return None
+        if not task:
+            return None
+
+        task.assignee_id = student_id
+        await session.commit()
+        return await TaskRepository.get_by_id(task_id, session)
 
     @staticmethod
     async def reject_pending_applications_for_task(task_id: int, except_app_id: int, session: AsyncSession):
@@ -153,10 +172,10 @@ class TaskRepository:
 class ApplicationRepository:
     @staticmethod
     async def create(task_id: int, student_id: int, message: str | None, session: AsyncSession) -> TaskApplication:
-        app = TaskApplication(task_id=task_id, student_id=student_id, message=message)
-        session.add(app)
+        application = TaskApplication(task_id=task_id, student_id=student_id, message=message)
+        session.add(application)
         await session.commit()
-        return await ApplicationRepository.get_by_id(app.id, session)
+        return await ApplicationRepository.get_by_id(application.id, session)
 
     @staticmethod
     async def get_by_id(app_id: int, session: AsyncSession) -> TaskApplication | None:
@@ -184,12 +203,13 @@ class ApplicationRepository:
 
     @staticmethod
     async def update_status(app_id: int, status: ApplicationStatus, session: AsyncSession) -> TaskApplication | None:
-        app = await ApplicationRepository.get_by_id(app_id, session)
-        if app:
-            app.status = status
-            await session.commit()
-            return await ApplicationRepository.get_by_id(app_id, session)
-        return None
+        application = await ApplicationRepository.get_by_id(app_id, session)
+        if not application:
+            return None
+
+        application.status = status
+        await session.commit()
+        return await ApplicationRepository.get_by_id(app_id, session)
 
     @staticmethod
     async def reject_all_by_student(student_id: int, session: AsyncSession):
@@ -198,9 +218,9 @@ class ApplicationRepository:
             TaskApplication.status == ApplicationStatus.PENDING,
         )
         result = await session.execute(stmt)
-        apps = result.scalars().all()
-        for app in apps:
-            app.status = ApplicationStatus.REJECTED
+        applications = result.scalars().all()
+        for application in applications:
+            application.status = ApplicationStatus.REJECTED
         await session.commit()
 
     @staticmethod
@@ -250,11 +270,16 @@ class TransactionRepository:
         task_id: int | None,
         session: AsyncSession,
     ) -> PointTransaction:
-        tx = PointTransaction(user_id=user_id, amount=amount, transaction_type=transaction_type, task_id=task_id)
-        session.add(tx)
+        transaction = PointTransaction(
+            user_id=user_id,
+            amount=amount,
+            transaction_type=transaction_type,
+            task_id=task_id,
+        )
+        session.add(transaction)
         await session.commit()
-        await session.refresh(tx)
-        return tx
+        await session.refresh(transaction)
+        return transaction
 
     @staticmethod
     async def get_by_user(user_id: int, session: AsyncSession):

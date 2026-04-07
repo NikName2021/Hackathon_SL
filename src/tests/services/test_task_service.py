@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from database.all_models import ApplicationStatus, Task, TaskApplication, TaskStatus, TaskSubmission
-from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, build_task_response
+from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, build_application_response, build_task_response
 from services.task_service import TaskService
 
 
@@ -143,6 +143,18 @@ async def test_build_task_response_uses_latest_submission(mock_task):
     assert result.latest_submission is not None
     assert result.latest_submission.id == 2
     assert result.latest_submission.status == "approved"
+
+
+@pytest.mark.asyncio
+async def test_build_application_response_uses_task_summary(mock_task, mock_application):
+    mock_application.task = mock_task
+    mock_application.student = None
+
+    result = build_application_response(mock_application)
+
+    assert result.task.id == mock_task.id
+    assert result.task.title == mock_task.title
+    assert result.student.id == 0
 
 
 @pytest.mark.asyncio

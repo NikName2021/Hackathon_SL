@@ -25,6 +25,7 @@ def _task_stub(task_id: int = 0, *, status: TaskStatus = TaskStatus.OPEN) -> Sim
         owner=None,
         assignee=None,
         category=None,
+        applications=[],
         submissions=[],
     )
 
@@ -86,6 +87,25 @@ class TaskCreate(BaseModel):
     deadline: datetime | None = None
 
 
+class TaskUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    category_id: int | None = None
+    points_reward: int | None = None
+    deadline: datetime | None = None
+
+
+class TaskShortResponse(BaseModel):
+    id: int
+    title: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ApplicationCreate(BaseModel):
+    message: str | None = None
+
+
 class SubmissionResponse(BaseModel):
     id: int
     task_id: int
@@ -94,6 +114,19 @@ class SubmissionResponse(BaseModel):
     status: str
     submitted_at: datetime
     feedback: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ApplicationResponse(BaseModel):
+    id: int
+    task_id: int
+    student_id: int
+    student: UserShortResponse
+    task: TaskShortResponse
+    status: ApplicationStatus
+    message: str | None
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -109,6 +142,7 @@ class TaskResponse(BaseModel):
     owner: UserShortResponse
     assignee: UserShortResponse | None = None
     category: CategoryResponse | None = None
+    applications: list[ApplicationResponse] = []
     latest_submission: SubmissionResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -121,22 +155,6 @@ class DashboardStats(BaseModel):
     total_points: int = 0
     pending_applications: int = 0
     pending_moderation: int = 0
-
-
-class ApplicationCreate(BaseModel):
-    message: str | None = None
-
-
-class ApplicationResponse(BaseModel):
-    id: int
-    task_id: int
-    task: TaskResponse
-    student: UserShortResponse
-    status: ApplicationStatus
-    message: str | None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class SubmissionCreate(BaseModel):
@@ -192,6 +210,28 @@ def build_submission_response(submission: Any | None) -> SubmissionResponse | No
     return SubmissionResponse.model_validate(submission)
 
 
+def build_task_short_response(task: Any | None) -> TaskShortResponse:
+    task = _resolve_task(task)
+    return TaskShortResponse(id=task.id, title=task.title)
+
+
+def build_application_response(application: Any) -> ApplicationResponse:
+    task = getattr(application, "task", None)
+    if task is None:
+        task = _task_stub(application.task_id)
+
+    return ApplicationResponse(
+        id=application.id,
+        task_id=application.task_id,
+        student_id=getattr(application, "student_id", 0),
+        task=build_task_short_response(task),
+        student=build_user_short_response(getattr(application, "student", None)),
+        status=application.status,
+        message=application.message,
+        created_at=getattr(application, "created_at", None) or utcnow(),
+    )
+
+
 def build_task_response(task: Any | None) -> TaskResponse:
     task = _resolve_task(task)
 
@@ -206,21 +246,9 @@ def build_task_response(task: Any | None) -> TaskResponse:
         owner=build_user_short_response(getattr(task, "owner", None)),
         assignee=build_user_short_response(getattr(task, "assignee", None)) if getattr(task, "assignee", None) else None,
         category=build_category_response(getattr(task, "category", None)),
+        applications=[
+            build_application_response(application)
+            for application in getattr(task, "applications", []) or []
+        ],
         latest_submission=build_submission_response(_resolve_latest_submission(task)),
-    )
-
-
-def build_application_response(application: Any) -> ApplicationResponse:
-    task = getattr(application, "task", None)
-    if task is None:
-        task = _task_stub(application.task_id)
-
-    return ApplicationResponse(
-        id=application.id,
-        task_id=application.task_id,
-        task=build_task_response(task),
-        student=build_user_short_response(getattr(application, "student", None)),
-        status=application.status,
-        message=application.message,
-        created_at=getattr(application, "created_at", None) or utcnow(),
     )

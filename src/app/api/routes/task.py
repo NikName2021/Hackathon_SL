@@ -1,11 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.config import async_get_db, logger
-from schemas.task import TaskCreate, TaskResponse, ApplicationCreate, ApplicationResponse, SubmissionCreate, SubmissionResponse, TaskReview, DashboardStats
+from schemas.task import (
+    ApplicationCreate,
+    ApplicationResponse,
+    DashboardStats,
+    SubmissionCreate,
+    SubmissionResponse,
+    TaskCreate,
+    TaskResponse,
+    TaskReview,
+    TaskUpdate,
+    build_task_response,
+)
 from services.task_service import TaskService
-from helpers.auth import get_current_user, RoleChecker
+from helpers.auth import get_current_user, RoleChecker, get_current_user_optional
 from database.all_models import User, Role, TaskStatus
 
 router = APIRouter(prefix="/tasks", tags=["Задачи"])
@@ -20,12 +32,24 @@ async def create_task(
     return await TaskService.create_task(task_data, current_user.id, db)
 
 
+@router.patch("/{task_id}", response_model=TaskResponse)
+async def update_task(
+    task_id: int,
+    task_data: TaskUpdate,
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.update_task(task_id, current_user.id, task_data, db)
+
+
 @router.get("/", response_model=List[TaskResponse])
 async def get_tasks(
     category_id: int | None = None,
+    current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(async_get_db)
 ):
-    return await TaskService.get_available_tasks(db, category_id=category_id)
+    user_id = current_user.id if current_user else None
+    return await TaskService.get_available_tasks(db, category_id=category_id, user_id=user_id)
 
 
 @router.get("/my", response_model=List[TaskResponse])
@@ -77,6 +101,18 @@ async def get_dashboard_stats(
         stats.pending_moderation = len(list(mod))
         
     return stats
+
+
+@router.get("/{task_id}", response_model=TaskResponse)
+async def get_task(
+    task_id: int,
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    task = await TaskService._get_task_or_404(task_id, db)
+    if current_user.role != Role.ADMIN and task.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the task owner can view this task")
+    return build_task_response(task)
 
 
 @router.post("/{task_id}/approve", response_model=TaskResponse)

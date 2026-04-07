@@ -18,11 +18,19 @@ class AuthService:
         if existing_user:
             raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
 
+        # Map string role directly to enum
+        try:
+            role_enum = Role(user_data.role.lower())
+            if role_enum == Role.ADMIN: # Don't allow public admin registrations
+                role_enum = Role.STUDENT
+        except (ValueError, AttributeError):
+            role_enum = Role.STUDENT
+
         new_user_dto = UserCreateDTO(
             email=user_data.email,
             hashed_password=hash_password(user_data.password),
-            full_name=user_data.username, # Using username as full_name for now
-            role=Role.STUDENT # Default role
+            full_name=user_data.username,
+            role=role_enum
         )
         return await UserRepository.create(new_user_dto, session)
 

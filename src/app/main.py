@@ -6,22 +6,23 @@ from fastapi.staticfiles import StaticFiles
 from swagger_ui_bundle import swagger_ui_3_path
 
 from api.routes.api import router as api_router
-from core.config import API_PREFIX, DEBUG, PROJECT_NAME, VERSION, MEMOIZATION_FLAG, HOST, PORT
+from core.config import API_PREFIX, DEBUG, HOST, MEMOIZATION_FLAG, PORT, PROJECT_NAME, VERSION, sessionmaker
 from core.events import create_start_app_handler
+from helpers.seed_data import seed_categories
 from middleware import LoggingMiddleware
 
-# origins = [
-#     "http://localhost:5173"
-# ]
 
-
-origins = [
-    "*"
-]
+origins = ["*"]
 
 
 def get_application() -> FastAPI:
-    application = FastAPI(title=PROJECT_NAME, debug=DEBUG, version=VERSION, docs_url=None, redoc_url=None)
+    application = FastAPI(
+        title=PROJECT_NAME,
+        debug=DEBUG,
+        version=VERSION,
+        docs_url=None,
+        redoc_url=None,
+    )
     application.include_router(api_router, prefix=API_PREFIX)
     application.mount("/swagger-static", StaticFiles(directory=swagger_ui_3_path), name="swagger-static")
     application.add_middleware(LoggingMiddleware)
@@ -35,6 +36,11 @@ def get_application() -> FastAPI:
 
     if MEMOIZATION_FLAG:
         application.add_event_handler("startup", create_start_app_handler(application))
+
+    @application.on_event("startup")
+    async def startup_seed():
+        async with sessionmaker() as session:
+            await seed_categories(session)
 
     @application.get("/docs", include_in_schema=False)
     async def custom_swagger_ui_html():
@@ -54,6 +60,7 @@ def get_application() -> FastAPI:
 
 
 app = get_application()
+
 
 if __name__ == "__main__":
     uvicorn.run(get_application(), host=HOST, port=PORT)

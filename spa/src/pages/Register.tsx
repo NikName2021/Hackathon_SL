@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { Button, cn } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient, setAccessToken } from '@/api/client';
 import type { AuthResponse } from '@/types';
@@ -13,6 +13,7 @@ export const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState<'student' | 'employee'>('student');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -28,6 +29,7 @@ export const Register: React.FC = () => {
         email,
         password,
         username: fullName,
+        role: role,
       });
       setAccessToken(response.data.token.access_token);
       login(response.data.user);
@@ -58,13 +60,40 @@ export const Register: React.FC = () => {
         <Card>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
+              <div className="flex p-1 bg-surface-100 dark:bg-surface-800 rounded-2xl mb-6">
+                <button
+                  type="button"
+                  onClick={() => setRole('student')}
+                  className={cn(
+                    "flex-1 py-3 text-sm font-bold rounded-xl transition-all",
+                    role === 'student' 
+                      ? "bg-white dark:bg-surface-700 text-primary-600 shadow-sm" 
+                      : "text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+                  )}
+                >
+                  Я Студент
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('employee')}
+                  className={cn(
+                    "flex-1 py-3 text-sm font-bold rounded-xl transition-all",
+                    role === 'employee' 
+                      ? "bg-white dark:bg-surface-700 text-primary-600 shadow-sm" 
+                      : "text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+                  )}
+                >
+                  Я Сотрудник
+                </button>
+              </div>
+
               <div className="relative">
                 <Input
                   type="text"
                   placeholder="Фамилия Имя"
                   label="ФИО"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -77,7 +106,7 @@ export const Register: React.FC = () => {
                   placeholder="Ваш Email"
                   label="Email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -90,7 +119,7 @@ export const Register: React.FC = () => {
                   placeholder="Придумайте пароль"
                   label="Пароль"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   className="pl-10"
                   required
                 />

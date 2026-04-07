@@ -47,27 +47,35 @@ export interface Submission {
   submitted_at: string;
 }
 
+export interface TaskSummary {
+  id: number;
+  title: string;
+}
+
+export interface Application {
+  id: number;
+  task_id: number;
+  student_id: number;
+  task: TaskSummary;
+  student: User;
+  message?: string | null;
+  status: ApplicationStatus;
+  created_at: string;
+}
+
 export interface Task {
   id: number;
   title: string;
   description?: string | null;
   category?: Category | null;
   owner: User;
+  assignee?: User | null;
   points_reward: number;
   status: TaskStatus;
   created_date: string;
   deadline?: string | null;
+  applications?: Application[];
   latest_submission?: Submission | null;
-}
-
-export interface Application {
-  id: number;
-  task_id: number;
-  task: Task;
-  student: User;
-  message?: string | null;
-  status: ApplicationStatus;
-  created_at: string;
 }
 
 export interface AdminStats {

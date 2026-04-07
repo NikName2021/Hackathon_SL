@@ -60,7 +60,7 @@ engine = create_async_engine(
                 POSTGRES_PASSWORD))
 sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 async def async_get_db() -> AsyncGenerator[AsyncSession, None]:

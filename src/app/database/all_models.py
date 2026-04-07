@@ -81,6 +81,13 @@ class Task(DeclBase):
     applications = relationship("TaskApplication", back_populates="task")
     submissions = relationship("TaskSubmission", back_populates="task")
 
+    @property
+    def latest_submission(self):
+        if self.submissions:
+            # Sort by ID or date descending
+            return sorted(self.submissions, key=lambda x: x.submitted_at, reverse=True)[0]
+        return None
+
 
 class TaskApplication(DeclBase):
     __tablename__ = "task_application"
@@ -132,6 +139,18 @@ class IssuedJWTToken(DeclBase):
     modificated_date = Column(DateTime, default=datetime.datetime.now)
 
     user = relationship("User", back_populates="user_refresh_tokens")
+
+
+class ChatMessage(DeclBase):
+    __tablename__ = "chat_message"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("task.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    task = relationship("Task")
+    sender = relationship("User")
 
 
 async def create_tables(engine: AsyncEngine):

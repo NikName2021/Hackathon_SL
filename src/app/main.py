@@ -3,8 +3,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes.api import router as api_router
-from core.config import API_PREFIX, DEBUG, PROJECT_NAME, VERSION, MEMOIZATION_FLAG, HOST, PORT
+from core.config import (
+    API_PREFIX, DEBUG, PROJECT_NAME, VERSION, MEMOIZATION_FLAG, HOST, PORT, sessionmaker
+)
 from core.events import create_start_app_handler
+from helpers.seed_data import seed_categories
 from middleware import LoggingMiddleware
 
 # origins = [
@@ -31,6 +34,12 @@ def get_application() -> FastAPI:
 
     if MEMOIZATION_FLAG:
         application.add_event_handler("startup", create_start_app_handler(application))
+    
+    @application.on_event("startup")
+    async def startup_seed():
+        async with sessionmaker() as session:
+            await seed_categories(session)
+            
     return application
 
 

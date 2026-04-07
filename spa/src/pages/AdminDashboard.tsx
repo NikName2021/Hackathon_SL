@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 import { apiClient } from '@/api/client';
 import { DashboardStats } from '@/types';
-import { ShieldCheck, Users, Briefcase, Activity, AlertCircle, TrendingUp, BarChart3, Settings } from 'lucide-react';
+import { ShieldCheck, Users, Briefcase, Activity, AlertCircle, TrendingUp, BarChart3, Settings, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
@@ -48,9 +49,14 @@ export const AdminDashboard: React.FC = () => {
           </h1>
           <p className="text-surface-500 mt-1">Глобальный мониторинг и управление ресурсами платформы</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
+          <Link to="/tasks/new">
+            <Button leftIcon={<Plus className="w-5 h-5" />} className="h-12 px-6">
+              Создать задачу
+            </Button>
+          </Link>
           <Link to="/moderation">
-            <Card className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 flex items-center gap-2 cursor-pointer hover:border-red-300">
+            <Card className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 flex items-center gap-2 cursor-pointer hover:border-red-300">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span className="text-sm font-bold text-red-600">{stats?.pending_moderation} задачи на проверку</span>
             </Card>
@@ -102,13 +108,19 @@ export const AdminDashboard: React.FC = () => {
             Быстрое управление
           </h2>
           <div className="grid gap-4">
+            <Link to="/tasks/new" className="w-full">
+              <Button className="w-full justify-between h-14 px-6">
+                Создать задачу
+                <Plus className="w-4 h-4" />
+              </Button>
+            </Link>
             <Link to="/moderation" className="w-full">
               <Button variant="outline" className="w-full justify-between h-14 px-6 border-red-100 text-red-600 hover:bg-red-50">
                 Модерация задач
                 <span className="bg-red-100 px-2 py-0.5 rounded text-xs">{stats?.pending_moderation}</span>
               </Button>
             </Link>
-            <Link to="/admin-panel" className="w-full">
+            <Link to="/admin" className="w-full">
               <Button variant="outline" className="w-full justify-between h-14 px-6">
                 Все пользователи
                 <Users className="w-4 h-4" />

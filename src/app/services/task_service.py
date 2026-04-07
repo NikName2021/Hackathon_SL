@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from database.all_models import TaskStatus, ApplicationStatus, User, Role
 from repositories.task import TaskRepository, TaskCreateDTO, ApplicationRepository, SubmissionRepository, TransactionRepository
 from repositories.user import UserRepository
-from schemas.task import TaskCreate, ApplicationCreate, SubmissionCreate, TaskReview
+from schemas.task import TaskCreate, ApplicationCreate, SubmissionCreate, TaskReview, TaskUpdate
 
 
 class TaskService:
@@ -19,6 +19,17 @@ class TaskService:
         return task
 
     @staticmethod
+    async def update_task(task_id: int, owner_id: int, update_data: TaskUpdate, session: AsyncSession):
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+        if task.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Вы не являетесь владельцем задачи")
+        
+        updated_task = await TaskRepository.update(task_id, update_data.model_dump(exclude_unset=True), session)
+        return updated_task
+
+    @staticmethod
     async def approve_task(task_id: int, session: AsyncSession):
         return await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
 
@@ -27,8 +38,8 @@ class TaskService:
         return await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session)
 
     @staticmethod
-    async def get_available_tasks(session: AsyncSession, category_id: int | None = None):
-        return await TaskRepository.get_all(session, status=TaskStatus.OPEN, category_id=category_id)
+    async def get_available_tasks(session: AsyncSession, category_id: int | None = None, user_id: int | None = None):
+        return await TaskRepository.get_all(session, status=TaskStatus.OPEN, category_id=category_id, exclude_student_id=user_id)
 
     @staticmethod
     async def get_my_tasks(user_id: int, role: Role, session: AsyncSession):

@@ -17,7 +17,7 @@ export const MainLayout: React.FC = () => {
     { name: 'Дашборд', path: '/', icon: LayoutDashboard, roles: ['student', 'employee', 'admin'] },
     { name: 'Каталог задач', path: '/tasks', icon: Briefcase, roles: ['student'] },
     { name: 'Мои задачи', path: '/tasks/my', icon: ListChecks, roles: ['student'] },
-    { name: 'Создать задачу', path: '/tasks/new', icon: Plus, roles: ['employee'] },
+    { name: 'Создать задачу', path: '/tasks/new', icon: Plus, roles: ['employee', 'admin'] },
     { name: 'Отклики', path: '/applications', icon: Users, roles: ['employee'] },
     { name: 'На проверку', path: '/reviews', icon: CheckSquare, roles: ['employee'] },
     { name: 'Аналитика', path: '/admin', icon: Settings, roles: ['admin'] },

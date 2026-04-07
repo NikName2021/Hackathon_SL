@@ -17,20 +17,34 @@ class TaskCreateDTO(BaseModel):
 
 class TaskRepository:
     @staticmethod
-    async def get_all(session: AsyncSession, status: TaskStatus | None = TaskStatus.OPEN, category_id: int | None = None):
-        stmt = select(Task).options(selectinload(Task.owner), selectinload(Task.category))
+    async def get_all(session: AsyncSession, status: TaskStatus | None = TaskStatus.OPEN, category_id: int | None = None, exclude_student_id: int | None = None):
+        stmt = select(Task).options(
+            selectinload(Task.owner), 
+            selectinload(Task.category),
+            selectinload(Task.applications).selectinload(TaskApplication.student),
+            selectinload(Task.applications).selectinload(TaskApplication.task),
+            selectinload(Task.submissions)
+        )
         if status:
             stmt = stmt.where(Task.status == status)
         if category_id:
             stmt = stmt.where(Task.category_id == category_id)
+        
+        if exclude_student_id:
+            # Subquery to find task IDs already applied to by this student
+            subq = select(TaskApplication.task_id).where(TaskApplication.student_id == exclude_student_id)
+            stmt = stmt.where(Task.id.not_in(subq))
+            
         result = await session.execute(stmt)
         return result.scalars().all()
 
     @staticmethod
     async def get_by_owner(owner_id: int, session: AsyncSession):
         stmt = select(Task).where(Task.owner_id == owner_id).options(
+            selectinload(Task.owner),
             selectinload(Task.category), 
-            selectinload(Task.applications),
+            selectinload(Task.applications).selectinload(TaskApplication.student),
+            selectinload(Task.applications).selectinload(TaskApplication.task),
             selectinload(Task.submissions)
         )
         result = await session.execute(stmt)
@@ -39,9 +53,14 @@ class TaskRepository:
     @staticmethod
     async def get_by_student(student_id: int, session: AsyncSession):
         stmt = select(Task).join(TaskApplication).where(
-            TaskApplication.student_id == student_id,
-            TaskApplication.status == ApplicationStatus.ACCEPTED
-        ).options(selectinload(Task.owner), selectinload(Task.category))
+            TaskApplication.student_id == student_id
+        ).options(
+            selectinload(Task.owner), 
+            selectinload(Task.category),
+            selectinload(Task.applications).selectinload(TaskApplication.student),
+            selectinload(Task.applications).selectinload(TaskApplication.task),
+            selectinload(Task.submissions)
+        )
         result = await session.execute(stmt)
         return result.scalars().all()
 
@@ -49,7 +68,9 @@ class TaskRepository:
     async def get_by_id(task_id: int, session: AsyncSession) -> Task | None:
         stmt = select(Task).where(Task.id == task_id).options(
             selectinload(Task.owner), 
-            selectinload(Task.applications),
+            selectinload(Task.category),
+            selectinload(Task.applications).selectinload(TaskApplication.student),
+            selectinload(Task.applications).selectinload(TaskApplication.task),
             selectinload(Task.submissions)
         )
         result = await session.execute(stmt)
@@ -60,7 +81,17 @@ class TaskRepository:
         task = Task(**task_data.model_dump())
         session.add(task)
         await session.commit()
-        await session.refresh(task)
+        return await TaskRepository.get_by_id(task.id, session)
+
+    @staticmethod
+    async def update(task_id: int, update_data: dict, session: AsyncSession) -> Task | None:
+        task = await TaskRepository.get_by_id(task_id, session)
+        if task:
+            for key, value in update_data.items():
+                if value is not None:
+                    setattr(task, key, value)
+            await session.commit()
+            return await TaskRepository.get_by_id(task_id, session)
         return task
 
     @staticmethod
@@ -69,7 +100,7 @@ class TaskRepository:
         if task:
             task.status = status
             await session.commit()
-            await session.refresh(task)
+            return await TaskRepository.get_by_id(task_id, session)
         return task
 
     @staticmethod
@@ -89,7 +120,14 @@ class ApplicationRepository:
         session.add(app)
         await session.commit()
         await session.refresh(app)
-        return app
+        
+        # Load relationships for the response
+        stmt = select(TaskApplication).where(TaskApplication.id == app.id).options(
+            selectinload(TaskApplication.student),
+            selectinload(TaskApplication.task)
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one()
 
     @staticmethod
     async def get_by_id(app_id: int, session: AsyncSession) -> TaskApplication | None:

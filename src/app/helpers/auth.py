@@ -81,6 +81,27 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+        credentials: HTTPAuthorizationCredentials | None = Depends(security),
+        db: AsyncSession = Depends(async_get_db)
+) -> User | None:
+    """Опционально получить текущего пользователя (без ошибки 401)"""
+    if not credentials:
+        return None
+    
+    try:
+        token = credentials.credentials
+        payload = decode_token(token)
+        if not payload:
+            return None
+
+        user_id = payload.get("user_id")
+        result = await db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+    except Exception:
+        return None
+
+
 class RoleChecker:
     """Проверка ролей пользователя"""
 

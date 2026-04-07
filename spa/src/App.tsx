@@ -12,6 +12,7 @@ import { AdminPanel } from '@/pages/AdminPanel';
 import { MyTasks } from '@/pages/MyTasks';
 import { ApplicationsPanel } from '@/pages/ApplicationsPanel';
 import { ModerationPanel } from '@/pages/ModerationPanel';
+import { EditTask } from '@/pages/EditTask';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -48,6 +49,7 @@ function App() {
         <Route path="tasks" element={<TaskCatalog />} />
         <Route path="tasks/my" element={<MyTasks />} />
         <Route path="tasks/new" element={<CreateTask />} />
+        <Route path="tasks/edit/:id" element={<EditTask />} />
         <Route path="reviews" element={<EmployeeReviews />} />
         <Route path="applications" element={<ApplicationsPanel />} />
         <Route path="admin" element={<AdminPanel />} />

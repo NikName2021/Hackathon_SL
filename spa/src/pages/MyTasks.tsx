@@ -3,15 +3,21 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
 import { Task } from '@/types';
-import { Clock, CheckCircle2, ChevronRight, FileText, LayoutList } from 'lucide-react';
+import { Clock, CheckCircle2, ChevronRight, FileText, LayoutList, Users, ShieldAlert, Edit, ArrowRight, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SubmissionModal } from '@/components/SubmissionModal';
+import { ChatComponent } from '@/components/ChatComponent';
+import { useAuth } from '@/context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export const MyTasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatTask, setChatTask] = useState<Task | null>(null);
+  const { user } = useAuth();
 
   const fetchMyTasks = async () => {
     try {
@@ -33,6 +39,11 @@ export const MyTasks: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const openChat = (task: Task) => {
+    setChatTask(task);
+    setIsChatOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -41,12 +52,58 @@ export const MyTasks: React.FC = () => {
     );
   }
 
+  const isStudent = user?.role === 'student';
+
+  const getApplicationStatus = (task: Task) => {
+    if (!isStudent || !user || !task.applications) return null;
+    const myApp = task.applications.find((app: any) => 
+      app.student_id === user.id || app.student?.id === user.id
+    );
+    return myApp?.status || null;
+  };
+
+  const getStatusBadge = (status: string, appStatus: string | null = null) => {
+    // If student, priority to application status
+    if (isStudent && appStatus) {
+      switch (appStatus) {
+        case 'pending':
+          return <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/20 text-[10px] font-bold uppercase tracking-wider">Ожидание</span>;
+        case 'rejected':
+          return <span className="px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-900/20 text-[10px] font-bold uppercase tracking-wider">Отклонено</span>;
+        case 'accepted':
+          // If accepted, show task status instead or in addition
+          break;
+      }
+    }
+
+    switch (status) {
+      case 'pending_approval':
+        return <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-600 dark:bg-orange-900/20 text-[10px] font-bold uppercase tracking-wider">Модерация</span>;
+      case 'open':
+        return <span className="px-2 py-0.5 rounded bg-green-100 text-green-600 dark:bg-green-900/20 text-[10px] font-bold uppercase tracking-wider">{isStudent ? 'Отклик отправлен' : 'Сбор заявок'}</span>;
+      case 'in_progress':
+        return <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/20 text-[10px] font-bold uppercase tracking-wider">В работе</span>;
+      case 'review':
+        return <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 text-[10px] font-bold uppercase tracking-wider">Проверка</span>;
+      case 'completed':
+        return <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-600 dark:bg-purple-900/20 text-[10px] font-bold uppercase tracking-wider">Завершено</span>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">Мои задачи</h1>
-          <p className="text-surface-500 mt-1">Задачи, на которые вы были утверждены и сейчас выполняете</p>
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
+            {isStudent ? 'Мои задачи' : 'Мои проекты'}
+          </h1>
+          <p className="text-surface-500 mt-1">
+            {isStudent 
+              ? 'Задачи, которые вы выполняете' 
+              : 'Управление созданными вами задачами и их статусами'}
+          </p>
         </div>
         <LayoutList className="w-10 h-10 text-primary-500/20" />
       </div>
@@ -56,13 +113,19 @@ export const MyTasks: React.FC = () => {
           <div className="w-16 h-16 bg-surface-100 dark:bg-surface-800 rounded-full flex items-center justify-center mb-4">
             <CheckCircle2 className="w-8 h-8 text-surface-400" />
           </div>
-          <h3 className="text-xl font-semibold text-surface-900 dark:text-white">У вас пока нет активных задач</h3>
+          <h3 className="text-xl font-semibold text-surface-900 dark:text-white">
+            {isStudent ? 'У вас пока нет активных задач' : 'Вы пока не создали ни одной задачи'}
+          </h3>
           <p className="text-surface-500 mt-2 max-w-sm">
-            Откликнитесь на интересные предложения в каталоге задач, и как только сотрудник одобрит вашу кандидатуру, они появятся здесь.
+            {isStudent 
+              ? 'Откликнитесь на интересные предложения в каталоге задач.' 
+              : 'Создайте свою первую задачу, чтобы привлечь талантливых студентов.'}
           </p>
-          <Button variant="outline" className="mt-6" onClick={() => window.location.href = '/tasks'}>
-            Перейти в каталог
-          </Button>
+          <Link to={isStudent ? "/tasks" : "/tasks/new"}>
+            <Button variant="outline" className="mt-6">
+              {isStudent ? 'Перейти в каталог' : 'Создать задачу'}
+            </Button>
+          </Link>
         </Card>
       ) : (
         <div className="grid gap-4">
@@ -75,31 +138,37 @@ export const MyTasks: React.FC = () => {
             >
               <Card className="hover:border-primary-500/50 transition-all p-5 group">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
-                      <Clock className="w-6 h-6 text-primary-600" />
+                  <div className="flex gap-4 items-start flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      {task.status === 'completed' 
+                        ? <CheckCircle2 className="w-6 h-6 text-green-500" />
+                        : <Clock className="w-6 h-6 text-primary-600" />
+                      }
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold uppercase tracking-wider text-primary-600 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-surface-500 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded">
                           {task.category?.name || 'Общее'}
                         </span>
-                        <span className="text-xs text-surface-400">
-                          ID: #{task.id}
-                        </span>
+                        {getStatusBadge(task.status, getApplicationStatus(task))}
                       </div>
                       <h3 className="text-lg font-bold text-surface-900 dark:text-white group-hover:text-primary-600 transition-colors">
                         {task.title}
                       </h3>
                       <div className="flex items-center gap-4 mt-2 text-sm text-surface-500">
-                        <div className="flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4 text-green-500" />
-                          <span>Награжда: {task.points_reward} очков</span>
+                        <div className="flex items-center gap-1 font-bold text-primary-600">
+                          <span>{task.points_reward} KP</span>
                         </div>
                         {task.deadline && (
                           <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span>Дедлайн: {new Date(task.deadline).toLocaleDateString()}</span>
+                            <Clock className="w-3 h-3" />
+                            <span>До {new Date(task.deadline).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        {!isStudent && (
+                          <div className="flex items-center gap-1 text-surface-400">
+                            <Users className="w-3 h-3" />
+                            <span>{task.applications?.length || 0} откликов</span>
                           </div>
                         )}
                       </div>
@@ -107,22 +176,123 @@ export const MyTasks: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    {task.status === 'review' ? (
-                      <div className="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-xl text-sm font-medium border border-yellow-200 dark:border-yellow-800">
-                        На проверке
+                    {isStudent ? (() => {
+                      const appStatus = getApplicationStatus(task);
+                      
+                      if (appStatus === 'pending') {
+                        return (
+                          <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl text-sm font-medium border border-blue-200/50 dark:border-blue-800/50">
+                            Ожидание решения
+                          </div>
+                        );
+                      }
+                      
+                      if (appStatus === 'rejected') {
+                        return (
+                          <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl text-sm font-medium border border-red-200/50 dark:border-red-800/50">
+                            Отклонено
+                          </div>
+                        );
+                      }
+
+                      if (appStatus === 'accepted') {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={() => openChat(task)}
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<MessageSquare className="w-4 h-4" />}
+                            >
+                              Чат
+                            </Button>
+                            {task.status === 'in_progress' ? (
+                              <Button
+                                onClick={() => openSubmission(task)}
+                                variant="primary"
+                                size="sm"
+                                leftIcon={<FileText className="w-4 h-4" />}
+                              >
+                                Сдать
+                              </Button>
+                            ) : task.status === 'review' ? (
+                              <div className="px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-lg text-xs font-semibold border border-yellow-200/50">
+                                На проверке
+                              </div>
+                            ) : (
+                                <div className="px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-xs font-semibold border border-green-200/50">
+                                  Принято
+                                </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      
+                      if (task.status === 'in_progress' && appStatus !== 'accepted') {
+                        return (
+                          <div className="px-4 py-2 bg-surface-50 dark:bg-surface-800 text-surface-500 rounded-xl text-sm font-medium border border-surface-200 dark:border-surface-700">
+                            Место занято
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="px-4 py-2 bg-surface-50 dark:bg-surface-800 text-surface-500 rounded-xl text-sm font-medium border border-surface-200 dark:border-surface-700">
+                          {task.status === 'open' ? 'Отклик отправлен' : 'Завершено'}
+                        </div>
+                      );
+                    })() : (
+                      <div className="flex items-center gap-2">
+                        {task.status === 'open' && (
+                          <div className="flex items-center gap-2">
+                            <Link to="/applications">
+                              <Button size="sm" variant="outline" leftIcon={<Users className="w-4 h-4" />}>
+                                Отклики
+                              </Button>
+                            </Link>
+                            <Link to={`/tasks/edit/${task.id}`}>
+                              <Button size="sm" variant="ghost" className="text-surface-500 hover:text-primary-600" leftIcon={<Edit className="w-4 h-4" />}>
+                                Изменить
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
+                        {(task.status === 'review' || task.status === 'in_progress' || task.status === 'completed') && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={() => openChat(task)}
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<MessageSquare className="w-4 h-4" />}
+                            >
+                              Чат
+                            </Button>
+                            {task.status === 'review' && (
+                              <Link to="/reviews">
+                                <Button size="sm" variant="primary" leftIcon={<FileText className="w-4 h-4" />}>
+                                  Проверить
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                        )}
+                        {task.status === 'pending_approval' && (
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 text-orange-500 text-xs font-bold bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-xl border border-orange-200/50">
+                              <ShieldAlert className="w-4 h-4" /> Модерация
+                            </div>
+                            <Link to={`/tasks/edit/${task.id}`}>
+                              <Button size="sm" variant="ghost" className="text-surface-500 hover:text-primary-600" leftIcon={<Edit className="w-4 h-4" />}>
+                                Изменить
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
+                        <Button variant="ghost" size="sm" className="hidden md:flex text-surface-300">
+                          <ChevronRight className="w-5 h-5" />
+                        </Button>
                       </div>
-                    ) : (
-                      <Button
-                        onClick={() => openSubmission(task)}
-                        variant="primary"
-                        leftIcon={<FileText className="w-4 h-4" />}
-                      >
-                        Сдать работу
-                      </Button>
                     )}
-                    <Button variant="ghost" size="sm" className="hidden md:flex">
-                      <ChevronRight className="w-5 h-5" />
-                    </Button>
                   </div>
                 </div>
               </Card>
@@ -138,6 +308,15 @@ export const MyTasks: React.FC = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSuccess={fetchMyTasks}
+        />
+      )}
+
+      {chatTask && (
+        <ChatComponent
+          taskId={chatTask.id}
+          taskTitle={chatTask.title}
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
         />
       )}
     </div>

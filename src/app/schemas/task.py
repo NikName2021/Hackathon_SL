@@ -49,6 +49,36 @@ class TaskCreate(BaseModel):
     deadline: datetime | None = None
 
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    points_reward: Optional[int] = None
+    deadline: Optional[datetime] = None
+
+
+class TaskShortResponse(BaseModel):
+    id: int
+    title: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ApplicationCreate(BaseModel):
+    message: str | None = None
+
+
+class ApplicationResponse(BaseModel):
+    id: int
+    task_id: int
+    student_id: int
+    student: UserShortResponse
+    task: TaskShortResponse
+    status: ApplicationStatus
+    message: str | None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SubmissionResponse(BaseModel):
     id: int
     task_id: int
@@ -70,6 +100,7 @@ class TaskResponse(BaseModel):
     created_date: datetime
     owner: UserShortResponse
     category: CategoryResponse | None = None
+    applications: List[ApplicationResponse] = []
     latest_submission: Optional[SubmissionResponse] = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -83,18 +114,6 @@ class DashboardStats(BaseModel):
     pending_moderation: int = 0
 
 
-class ApplicationCreate(BaseModel):
-    message: str | None = None
-
-
-class ApplicationResponse(BaseModel):
-    id: int
-    task_id: int
-    student: UserShortResponse
-    status: ApplicationStatus
-    message: str | None
-    created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 
 class SubmissionCreate(BaseModel):

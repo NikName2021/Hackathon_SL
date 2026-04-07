@@ -19,7 +19,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshUser = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get<User>('/auth/me');
+      const response = await apiClient.get<User>('/auth/getIdentity');
       setUser(response.data);
     } catch (error) {
       setUser(null);

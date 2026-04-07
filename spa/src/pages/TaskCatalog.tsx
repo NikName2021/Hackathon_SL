@@ -13,7 +13,7 @@ export const TaskCatalog: React.FC = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await apiClient.get<Task[]>('/tasks/available');
+        const response = await apiClient.get<Task[]>('/tasks/');
         setTasks(response.data);
       } catch (error) {
         console.error('Failed to load tasks', error);

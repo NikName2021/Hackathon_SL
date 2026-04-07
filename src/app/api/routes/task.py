@@ -3,9 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from core.config import async_get_db, logger
-from schemas.task import TaskCreate, TaskResponse, ApplicationCreate, ApplicationResponse, SubmissionCreate, SubmissionResponse, TaskReview, DashboardStats
+from schemas.task import (
+    TaskCreate, TaskResponse, ApplicationCreate, ApplicationResponse, 
+    SubmissionCreate, SubmissionResponse, TaskReview, DashboardStats, TaskUpdate
+)
 from services.task_service import TaskService
-from helpers.auth import get_current_user, RoleChecker
+from helpers.auth import get_current_user, RoleChecker, get_current_user_optional
 from database.all_models import User, Role, TaskStatus
 
 router = APIRouter(prefix="/tasks", tags=["Задачи"])
@@ -20,12 +23,24 @@ async def create_task(
     return await TaskService.create_task(task_data, current_user.id, db)
 
 
+@router.patch("/{task_id}", response_model=TaskResponse)
+async def update_task(
+    task_id: int,
+    task_data: TaskUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.update_task(task_id, current_user.id, task_data, db)
+
+
 @router.get("/", response_model=List[TaskResponse])
 async def get_tasks(
     category_id: int | None = None,
+    current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(async_get_db)
 ):
-    return await TaskService.get_available_tasks(db, category_id=category_id)
+    user_id = current_user.id if current_user else None
+    return await TaskService.get_available_tasks(db, category_id=category_id, user_id=user_id)
 
 
 @router.get("/my", response_model=List[TaskResponse])

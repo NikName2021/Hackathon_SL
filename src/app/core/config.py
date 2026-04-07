@@ -1,5 +1,7 @@
 import logging
+import os
 from logging.config import dictConfig
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi.security import HTTPBearer
@@ -11,13 +13,30 @@ from starlette.datastructures import Secret
 from database.db_session import get_db_path
 from .logging import logging_config
 
-config = Config(".env")
+APP_DIR = Path(__file__).resolve().parents[1]
+ENV_FILE = Path(os.getenv("APP_ENV_FILE", APP_DIR / ".env"))
+config = Config(str(ENV_FILE))
+
+
+def parse_bool(value: str | bool | None, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    if value is None:
+        return default
+
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on", "debug", "development", "dev"}:
+        return True
+    if normalized in {"0", "false", "no", "off", "release", "production", "prod"}:
+        return False
+    return default
 
 API_PREFIX = "/api"
 VERSION = "0.1.0"
-DEBUG: bool = config("DEBUG", cast=bool, default=False)
+DEBUG: bool = parse_bool(config("DEBUG", cast=str, default="false"))
 SECRET_KEY: Secret = config("SECRET_KEY", cast=Secret, default="")
-MEMOIZATION_FLAG: bool = config("MEMOIZATION_FLAG", cast=bool, default=True)
+MEMOIZATION_FLAG: bool = parse_bool(config("MEMOIZATION_FLAG", cast=str, default="true"), default=True)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -56,7 +75,6 @@ async def async_get_db() -> AsyncGenerator[AsyncSession, None]:
 # )
 # logger.configure(handlers=[{"sink": sys.stderr, "level": LOGGING_LEVEL}])
 
-import os
 os.makedirs("logs", exist_ok=True)
 dictConfig(logging_config)
 

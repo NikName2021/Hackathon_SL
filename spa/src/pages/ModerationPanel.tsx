@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Task } from '@/types';
-import { ShieldCheck, ShieldAlert, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import type { Task } from '@/types';
+import { ShieldCheck, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const ModerationPanel: React.FC = () => {

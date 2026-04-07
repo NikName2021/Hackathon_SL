@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Category } from '@/types';
+import type { Category } from '@/types';
 
 export const CreateTask: React.FC = () => {
   const [title, setTitle] = useState('');

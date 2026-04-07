@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { motion } from 'framer-motion';
 import { apiClient } from '@/api/client';
-import { DashboardStats } from '@/types';
+import type { DashboardStats } from '@/types';
 import { ShieldCheck, Users, Briefcase, Activity, AlertCircle, TrendingUp, BarChart3, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -108,7 +109,7 @@ export const AdminDashboard: React.FC = () => {
                 <span className="bg-red-100 px-2 py-0.5 rounded text-xs">{stats?.pending_moderation}</span>
               </Button>
             </Link>
-            <Link to="/admin-panel" className="w-full">
+            <Link to="/admin" className="w-full">
               <Button variant="outline" className="w-full justify-between h-14 px-6">
                 Все пользователи
                 <Users className="w-4 h-4" />

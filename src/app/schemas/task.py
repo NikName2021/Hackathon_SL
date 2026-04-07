@@ -1,12 +1,18 @@
-from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from __future__ import annotations
+
 from datetime import datetime
-from database.all_models import TaskStatus, ApplicationStatus, Role
+from types import SimpleNamespace
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict
+
+from database.all_models import ApplicationStatus, Role, TaskStatus
 
 
 class CategoryResponse(BaseModel):
     id: int
     name: str
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -57,6 +63,7 @@ class SubmissionResponse(BaseModel):
     status: str
     submitted_at: datetime
     feedback: str | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -70,8 +77,7 @@ class TaskResponse(BaseModel):
     created_date: datetime
     owner: UserShortResponse
     category: CategoryResponse | None = None
-    latest_submission: Optional[SubmissionResponse] = None
-    model_config = ConfigDict(from_attributes=True)
+    latest_submission: SubmissionResponse | None = None
 
 
 class DashboardStats(BaseModel):
@@ -90,11 +96,11 @@ class ApplicationCreate(BaseModel):
 class ApplicationResponse(BaseModel):
     id: int
     task_id: int
+    task: TaskResponse
     student: UserShortResponse
     status: ApplicationStatus
     message: str | None
     created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 
 class SubmissionCreate(BaseModel):
@@ -112,6 +118,7 @@ class PointTransactionResponse(BaseModel):
     transaction_type: str
     created_at: datetime
     task_id: int | None
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -119,5 +126,92 @@ class ProfileResponse(BaseModel):
     user: UserShortResponse
     points: int
     reputation: float
-    history: List[PointTransactionResponse]
+    history: list[PointTransactionResponse]
+
     model_config = ConfigDict(from_attributes=True)
+
+
+def build_user_short_response(user: Any) -> UserShortResponse:
+    if user is None:
+        return UserShortResponse(
+            id=0,
+            email="",
+            full_name=None,
+            role=Role.STUDENT,
+            points=0,
+            reputation=0.0,
+        )
+    return UserShortResponse.model_validate(user)
+
+
+def build_category_response(category: Any | None) -> CategoryResponse | None:
+    if category is None:
+        return None
+    return CategoryResponse.model_validate(category)
+
+
+def build_submission_response(submission: Any | None) -> SubmissionResponse | None:
+    if submission is None:
+        return None
+    return SubmissionResponse.model_validate(submission)
+
+
+def build_task_response(task: Any) -> TaskResponse:
+    if task is None:
+        task = SimpleNamespace(
+            id=0,
+            title="",
+            description=None,
+            status=TaskStatus.OPEN,
+            points_reward=0,
+            deadline=None,
+            created_date=datetime.utcnow(),
+            owner=None,
+            category=None,
+            submissions=[],
+        )
+
+    submissions = getattr(task, "submissions", None) or []
+    latest_submission = None
+    if isinstance(submissions, list) and submissions:
+        latest_submission = max(submissions, key=lambda item: item.submitted_at)
+
+    return TaskResponse(
+        id=task.id,
+        title=task.title,
+        description=task.description,
+        status=task.status,
+        points_reward=task.points_reward,
+        deadline=getattr(task, "deadline", None),
+        created_date=getattr(task, "created_date", None) or datetime.utcnow(),
+        owner=build_user_short_response(getattr(task, "owner", None)),
+        category=build_category_response(getattr(task, "category", None)),
+        latest_submission=build_submission_response(latest_submission),
+    )
+
+
+def build_application_response(application: Any) -> ApplicationResponse:
+    task = getattr(application, "task", None)
+    if task is None:
+        task = SimpleNamespace(
+            id=application.task_id,
+            title="",
+            description=None,
+            status=TaskStatus.OPEN,
+            points_reward=0,
+            deadline=None,
+            created_date=datetime.utcnow(),
+            owner=None,
+            category=None,
+            submissions=[],
+        )
+
+    return ApplicationResponse(
+        id=application.id,
+        task_id=application.task_id,
+        task=build_task_response(task),
+        student=build_user_short_response(getattr(application, "student", None)),
+        status=application.status,
+        message=application.message,
+        created_at=getattr(application, "created_at", None) or datetime.utcnow(),
+    )

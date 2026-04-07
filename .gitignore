@@ -21,3 +21,12 @@ spa/package-lock.json
 /src/logs/app.log
 /src/logs/app_logs.json
 /src/.env
+
+# Local Python artifacts
+__pycache__/
+*.py[cod]
+.venv/
+.tmp/
+.run/
+.pytest_cache/
+src/pytest-cache-files-*/

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Task } from '@/types';
+import type { Task } from '@/types';
 import { motion } from 'framer-motion';
 
 export const TaskCatalog: React.FC = () => {
@@ -13,7 +13,7 @@ export const TaskCatalog: React.FC = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await apiClient.get<Task[]>('/tasks/available');
+        const response = await apiClient.get<Task[]>('/tasks/');
         setTasks(response.data);
       } catch (error) {
         console.error('Failed to load tasks', error);

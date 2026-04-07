@@ -1,6 +1,6 @@
-import React, { HTMLAttributes } from 'react';
+import React from 'react';
 import { cn } from './Button';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion, type HTMLMotionProps } from 'framer-motion';
 
 interface CardProps extends HTMLMotionProps<"div"> {}
 

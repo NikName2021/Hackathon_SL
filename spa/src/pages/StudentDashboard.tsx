@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { apiClient } from '@/api/client';
-import { DashboardStats, Task } from '@/types';
+import type { DashboardStats, Task } from '@/types';
 import { Trophy, Clock, CheckCircle2, ArrowRight, Zap, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

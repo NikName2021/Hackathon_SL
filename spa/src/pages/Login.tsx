@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient, setAccessToken } from '@/api/client';
-import { AuthResponse } from '@/types';
+import type { AuthResponse } from '@/types';
 import { Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 

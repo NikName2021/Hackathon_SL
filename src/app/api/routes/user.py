@@ -127,6 +127,11 @@ async def check_auth(current_user: User = Depends(get_current_user)):
     return {"status": "ok"}
 
 
+@router.get("/me", response_model=UserShortResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    return UserShortResponse.model_validate(current_user)
+
+
 @router.get("/getIdentity", response_model=UserResponse)
 async def get_identity(current_user: User = Depends(get_current_user)):
     return UserResponse.model_validate(current_user)

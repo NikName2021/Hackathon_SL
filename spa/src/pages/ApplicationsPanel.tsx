@@ -2,19 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { User, Task } from '@/types';
+import type { Application } from '@/types';
 import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Application {
-  id: number;
-  task_id: number;
-  student: User;
-  task: Task;
-  message: string;
-  status: string;
-  created_at: string;
-}
 
 export const ApplicationsPanel: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);

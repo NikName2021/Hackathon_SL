@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Task } from '@/types';
+import type { Task } from '@/types';
 import { Clock, CheckCircle2, ChevronRight, FileText, LayoutList } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SubmissionModal } from '@/components/SubmissionModal';

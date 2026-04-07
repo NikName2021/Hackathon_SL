@@ -1,5 +1,18 @@
 export type Role = 'student' | 'employee' | 'admin';
 
+export interface Skill {
+  id: number;
+  name: string;
+}
+
+export interface Achievement {
+  id: number;
+  name: string;
+  description: string;
+  icon_type: string;
+  earned_at?: string;
+}
+
 export interface User {
   id: number;
   email: string;
@@ -7,7 +20,12 @@ export interface User {
   full_name: string;
   points: number;
   reputation: number;
-  is_active: string;
+  is_active: boolean;
+  bio?: string;
+  avatar_url?: string;
+  resume_path?: string;
+  skills?: Skill[];
+  achievements?: Achievement[];
 }
 
 export interface Token {
@@ -61,6 +79,25 @@ export interface Submission {
   status?: string;
   feedback?: string;
   submitted_at: string;
+}
+
+export interface LeaderboardUser {
+  id: number;
+  full_name: string;
+  reputation: number;
+  points: number;
+  avatar_url?: string;
+  rank: number;
+  skills: string[];
+}
+
+export interface GamificationStats {
+  level: number;
+  points_to_next_level: number;
+  progress_percentage: number;
+  total_points: number;
+  rank: number;
+  achievements: Achievement[];
 }
 
 export interface AdminStats {

@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from database.all_models import TaskStatus, ApplicationStatus, User, Role
 from repositories.task import TaskRepository, TaskCreateDTO, ApplicationRepository, SubmissionRepository, TransactionRepository
 from repositories.user import UserRepository
+from services.gamification_service import GamificationService
 from schemas.task import TaskCreate, ApplicationCreate, SubmissionCreate, TaskReview, TaskUpdate
 
 
@@ -136,6 +137,9 @@ class TaskService:
             if user:
                 user.reputation += 1.0 # Simple fixed increment for now
                 await session.commit()
+                
+            # Check for achievements
+            await GamificationService.check_achievements(submission.student_id, session)
         else:
             await SubmissionRepository.update_review(submission.id, "rejected", review_data.feedback, session)
             await TaskRepository.update_status(task_id, TaskStatus.IN_PROGRESS, session)

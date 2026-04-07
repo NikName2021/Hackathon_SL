@@ -1,7 +1,19 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { LogOut, LayoutDashboard, Briefcase, Plus, CheckSquare, Settings, ListChecks, Users, ShieldAlert } from 'lucide-react';
+import { 
+  LogOut, 
+  LayoutDashboard, 
+  Briefcase, 
+  Plus, 
+  CheckSquare, 
+  Settings, 
+  ListChecks, 
+  Users, 
+  ShieldAlert,
+  User as UserIcon,
+  Trophy
+} from 'lucide-react';
 import { cn } from '@/components/ui/Button';
 
 export const MainLayout: React.FC = () => {
@@ -17,11 +29,13 @@ export const MainLayout: React.FC = () => {
     { name: 'Дашборд', path: '/', icon: LayoutDashboard, roles: ['student', 'employee', 'admin'] },
     { name: 'Каталог задач', path: '/tasks', icon: Briefcase, roles: ['student'] },
     { name: 'Мои задачи', path: '/tasks/my', icon: ListChecks, roles: ['student'] },
+    { name: 'Рейтинг', path: '/leaderboard', icon: Trophy, roles: ['student'] },
     { name: 'Создать задачу', path: '/tasks/new', icon: Plus, roles: ['employee', 'admin'] },
     { name: 'Отклики', path: '/applications', icon: Users, roles: ['employee'] },
     { name: 'На проверку', path: '/reviews', icon: CheckSquare, roles: ['employee'] },
-    { name: 'Аналитика', path: '/admin', icon: Settings, roles: ['admin'] },
     { name: 'Модерация', path: '/moderation', icon: ShieldAlert, roles: ['admin'] },
+    { name: 'Аналитика', path: '/admin', icon: Settings, roles: ['admin'] },
+    { name: 'Профиль', path: '/profile', icon: UserIcon, roles: ['student', 'employee', 'admin'] },
   ];
 
   return (

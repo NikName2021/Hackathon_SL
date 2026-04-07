@@ -21,3 +21,4 @@ spa/package-lock.json
 /src/logs/app.log
 /src/logs/app_logs.json
 /src/.env
+/src/app/uploads/

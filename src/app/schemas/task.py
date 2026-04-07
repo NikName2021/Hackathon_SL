@@ -14,6 +14,12 @@ class CategoryCreate(BaseModel):
     name: str
 
 
+class SkillResponse(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserShortResponse(BaseModel):
     id: int
     email: str
@@ -21,6 +27,10 @@ class UserShortResponse(BaseModel):
     role: Role
     points: int
     reputation: float
+    bio: str | None = None
+    avatar_url: str | None = None
+    resume_path: str | None = None
+    skills: List[SkillResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,6 +38,11 @@ class UserShortResponse(BaseModel):
 class UserResponse(UserShortResponse):
     is_active: bool
     created_date: datetime
+
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
 
 
 class Token(BaseModel):

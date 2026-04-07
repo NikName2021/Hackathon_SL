@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Response, Cookie
+from fastapi import APIRouter, HTTPException, status, Depends, Response, Cookie, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 
 from core.config import async_get_db, logger, REFRESH_TOKEN_EXPIRE_DAYS
 from schemas.input_forms import UserCreate, UserLogin
-from schemas.task import UserShortResponse, AuthResponse, Token, UserResponse
-from services.user_service import AuthService
+from schemas.task import UserShortResponse, AuthResponse, Token, UserResponse, ProfileUpdate
+from services.user_service import AuthService, ProfileService
 from helpers.auth import get_current_user, decode_token
 from database.all_models import User
 
@@ -130,3 +131,47 @@ async def check_auth(current_user: User = Depends(get_current_user)):
 @router.get("/getIdentity", response_model=UserResponse)
 async def get_identity(current_user: User = Depends(get_current_user)):
     return UserResponse.model_validate(current_user)
+
+
+@router.patch("/profile", response_model=UserResponse)
+async def update_profile(
+    update_data: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    user = await ProfileService.update_profile(current_user.id, update_data, db)
+    return UserResponse.model_validate(user)
+
+
+@router.post("/profile/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Файл должен быть изображением")
+    user = await ProfileService.upload_avatar(current_user.id, file, db)
+    return UserResponse.model_validate(user)
+
+
+@router.post("/profile/resume", response_model=UserResponse)
+async def upload_resume(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    if not file.filename.lower().endswith((".pdf", ".doc", ".docx")):
+        raise HTTPException(status_code=400, detail="Разрешены только файлы PDF и Word")
+    user = await ProfileService.upload_resume(current_user.id, file, db)
+    return UserResponse.model_validate(user)
+
+
+@router.post("/profile/skills", response_model=UserResponse)
+async def update_skills(
+    skills: List[str],
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    user = await ProfileService.update_skills(current_user.id, skills, db)
+    return UserResponse.model_validate(user)

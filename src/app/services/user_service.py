@@ -1,5 +1,7 @@
 import jwt
 import uuid
+import os
+import shutil
 from datetime import datetime
 from fastapi import HTTPException, status
 from core.config import SECRET_KEY, ALGORITHM
@@ -101,3 +103,44 @@ class AuthService:
         # We need the JTI from the token being used/cleared
         await UserRepository.revoke_refresh_token(refresh_token_jti, session)
         return {"status": "ok"}
+
+
+class ProfileService:
+    @staticmethod
+    async def update_profile(user_id: int, update_data: any, session: AsyncSession):
+        return await UserRepository.update_profile(user_id, update_data.model_dump(exclude_unset=True), session)
+
+    @staticmethod
+    async def update_skills(user_id: int, skill_names: list[str], session: AsyncSession):
+        return await UserRepository.update_skills(user_id, skill_names, session)
+
+    @staticmethod
+    async def upload_avatar(user_id: int, file: any, session: AsyncSession):
+        # Ensure uploads dir exists
+        upload_dir = "uploads/avatars"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_ext = file.filename.split(".")[-1]
+        file_name = f"{user_id}_{uuid.uuid4().hex}.{file_ext}"
+        file_path = os.path.join(upload_dir, file_name)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        url = f"/uploads/avatars/{file_name}"
+        return await UserRepository.update_avatar(user_id, url, session)
+
+    @staticmethod
+    async def upload_resume(user_id: int, file: any, session: AsyncSession):
+        upload_dir = "uploads/resumes"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_ext = file.filename.split(".")[-1]
+        file_name = f"{user_id}_{uuid.uuid4().hex}.{file_ext}"
+        file_path = os.path.join(upload_dir, file_name)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        url = f"/uploads/resumes/{file_name}"
+        return await UserRepository.update_resume(user_id, url, session)

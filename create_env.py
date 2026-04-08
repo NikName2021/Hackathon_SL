@@ -9,7 +9,7 @@ def randomword(length):
 
 
 with open(".env.example", "w") as f:
-    f.write(f"""; СОЗДАНО СКРИПТОМ
+    f.write(f"""# СОЗДАНО СКРИПТОМ
 PROJECT_VOLUME_SRC=./src/app
 NGINX_FILE=local_nginx.conf
 

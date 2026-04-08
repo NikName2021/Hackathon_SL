@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/Card';
-import { apiClient } from '@/api/client';
-import { AdminStats } from '@/types';
-import { motion } from 'framer-motion';
+import React, {useEffect, useState} from 'react';
+import {Card} from '@/components/ui/Card';
+import {apiClient} from '@/api/client';
+import {AdminStats} from '@/types';
+import {motion} from 'framer-motion';
 
 export const AdminPanel: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);

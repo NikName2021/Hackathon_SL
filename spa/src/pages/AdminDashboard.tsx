@@ -1,11 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { motion } from 'framer-motion';
-import { apiClient } from '@/api/client';
-import { DashboardStats } from '@/types';
-import { ShieldCheck, Users, Briefcase, Activity, AlertCircle, TrendingUp, BarChart3, Settings, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {Card} from '@/components/ui/Card';
+import {Button} from '@/components/ui/Button';
+import {motion} from 'framer-motion';
+import {apiClient} from '@/api/client';
+import {DashboardStats} from '@/types';
+import {
+  Activity,
+  AlertCircle,
+  BarChart3,
+  Briefcase,
+  Plus,
+  Settings,
+  ShieldCheck,
+  TrendingUp,
+  Users
+} from 'lucide-react';
+import {Link} from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);

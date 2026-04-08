@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Award, FileText, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { apiClient } from '@/api/client';
-import { useNotification } from '@/context/NotificationContext';
+import React, {useState} from 'react';
+import {AnimatePresence, motion} from 'framer-motion';
+import {AlertCircle, Award, FileText, Send, X} from 'lucide-react';
+import {Button} from '@/components/ui/Button';
+import {apiClient} from '@/api/client';
+import {useNotification} from '@/context/NotificationContext';
 
 interface ApplicationModalProps {
   taskId: number;

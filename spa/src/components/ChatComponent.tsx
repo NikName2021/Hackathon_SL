@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { apiClient } from '@/api/client';
-import { User } from '@/types';
-import { Send, User as UserIcon, X, Paperclip, FileText, Download, Loader2 } from 'lucide-react';
-import { Button } from './ui/Button';
-import { Card } from './ui/Card';
-import { motion } from 'framer-motion';
-import { useAuth } from '@/context/AuthContext';
+import React, {useEffect, useRef, useState} from 'react';
+import {apiClient} from '@/api/client';
+import {User} from '@/types';
+import {Download, FileText, Loader2, Paperclip, Send, User as UserIcon, X} from 'lucide-react';
+import {Button} from './ui/Button';
+import {Card} from './ui/Card';
+import {motion} from 'framer-motion';
+import {useAuth} from '@/context/AuthContext';
 
 interface Message {
   id: number;

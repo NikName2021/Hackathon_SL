@@ -234,6 +234,17 @@ class TaskAttachment(DeclBase):
     task = relationship("Task", back_populates="attachments")
 
 
+class FAQArticle(DeclBase):
+    __tablename__ = "faq_article"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    content = Column(String, nullable=False)
+    is_published = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+
+
 async def create_tables(engine: AsyncEngine):
     async with engine.begin() as conn:
         await conn.run_sync(DeclBase.metadata.create_all)

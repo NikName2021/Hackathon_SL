@@ -30,10 +30,20 @@ class AdminStats(BaseModel):
 async def list_users(
     limit: int = 100,
     offset: int = 0,
+    role: Role | None = None,
+    is_active: bool | None = None,
+    search: str | None = None,
     current_admin: User = Depends(RoleChecker([Role.ADMIN])),
     db: AsyncSession = Depends(async_get_db)
 ):
-    return await UserRepository.get_all_users(db, limit, offset)
+    return await UserRepository.get_all_users(
+        db,
+        limit=limit,
+        offset=offset,
+        role=role,
+        is_active=is_active,
+        search=search,
+    )
 
 
 @router.patch("/users/{user_id}", response_model=UserShortResponse)

@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -51,8 +51,28 @@ class UserRepository:
         return result.scalars().all()
 
     @staticmethod
-    async def get_all_users(session: AsyncSession, limit: int = 100, offset: int = 0):
-        stmt = select(User).limit(limit).offset(offset)
+    async def get_all_users(
+        session: AsyncSession,
+        limit: int = 100,
+        offset: int = 0,
+        role: Role | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+    ):
+        stmt = select(User)
+        if role is not None:
+            stmt = stmt.where(User.role == role)
+        if is_active is not None:
+            stmt = stmt.where(User.is_active == is_active)
+        if search:
+            pattern = f"%{search.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    User.email.ilike(pattern),
+                    User.full_name.ilike(pattern),
+                )
+            )
+        stmt = stmt.order_by(User.created_date.desc()).limit(limit).offset(offset)
         result = await session.execute(stmt)
         return result.scalars().all()
 

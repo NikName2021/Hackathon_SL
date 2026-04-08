@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from api.routes import user, task, category, profile, admin, chat, gamification, skill
+from api.routes import user, task, category, profile, admin, chat, gamification, skill, faq
 
 router = APIRouter(prefix="/v1")
 router.include_router(user.router)
@@ -11,3 +11,4 @@ router.include_router(profile.router)
 router.include_router(admin.router)
 router.include_router(gamification.router)
 router.include_router(skill.router)
+router.include_router(faq.router)

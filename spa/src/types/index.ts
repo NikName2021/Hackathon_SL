@@ -138,3 +138,13 @@ export interface RecommendedTask {
   skills: string[];
   attachments: TaskAttachment[];
 }
+
+export interface FAQArticle {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}

@@ -9,12 +9,14 @@ import { TaskCatalog } from '@/pages/TaskCatalog';
 import { CreateTask } from '@/pages/CreateTask';
 import { EmployeeReviews } from '@/pages/EmployeeReviews';
 import { AdminPanel } from '@/pages/AdminPanel';
+import { AdminUsers } from '@/pages/AdminUsers';
 import { MyTasks } from '@/pages/MyTasks';
 import { ApplicationsPanel } from '@/pages/ApplicationsPanel';
 import { ModerationPanel } from '@/pages/ModerationPanel';
 import { EditTask } from '@/pages/EditTask';
 import { Profile } from '@/pages/Profile';
 import Leaderboard from '@/pages/Leaderboard';
+import { FAQ } from '@/pages/FAQ';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -58,9 +60,11 @@ function App() {
           <Route path="reviews" element={<EmployeeReviews />} />
           <Route path="applications" element={<ApplicationsPanel />} />
           <Route path="admin" element={<AdminPanel />} />
+          <Route path="admin/users" element={<AdminUsers />} />
           <Route path="moderation" element={<ModerationPanel />} />
           <Route path="profile" element={<Profile />} />
           <Route path="leaderboard" element={<Leaderboard />} />
+          <Route path="faq" element={<FAQ />} />
         </Route>
       </Routes>
     </NotificationProvider>

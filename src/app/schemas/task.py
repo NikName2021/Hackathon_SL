@@ -33,7 +33,7 @@ class UserShortResponse(BaseModel):
     email: str
     full_name: str | None
     role: Role
-    is_active: bool
+    is_active: bool = True
     points: int
     reputation: float
     bio: str | None = None

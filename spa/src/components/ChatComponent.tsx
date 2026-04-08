@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {apiClient} from '@/api/client';
-import {User} from '@/types';
+import type {User} from '@/types';
 import {Download, FileText, Loader2, Paperclip, Send, User as UserIcon, X} from 'lucide-react';
 import {Button} from './ui/Button';
 import {Card} from './ui/Card';

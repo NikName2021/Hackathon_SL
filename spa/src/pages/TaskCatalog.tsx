@@ -9,7 +9,7 @@ import { Paperclip, Tag, User as UserIcon } from 'lucide-react';
 
 import { ApplicationModal } from '@/components/ApplicationModal';
 import { UserProfileModal } from '@/components/UserProfileModal';
-import { User } from '@/types';
+import type { User } from '@/types';
 
 export const TaskCatalog: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);

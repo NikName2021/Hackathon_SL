@@ -10,7 +10,7 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Skill } from '@/types';
+import type { User, Skill } from '@/types';
 import { Button } from '@/components/ui/Button';
 
 interface StudentProfileModalProps {

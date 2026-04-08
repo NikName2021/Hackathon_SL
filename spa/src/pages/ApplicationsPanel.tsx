@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { User, Task } from '@/types';
+import type { User, Task } from '@/types';
 import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserProfileModal } from '@/components/UserProfileModal';

@@ -4,8 +4,8 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Category, Skill, Task } from '@/types';
-import { Upload, X, Paperclip, Image as ImageIcon, FileText } from 'lucide-react';
+import type { Category, Skill, Task } from '@/types';
+import { Upload, X, Image as ImageIcon, FileText } from 'lucide-react';
 
 import { useNotification } from '@/context/NotificationContext';
 

@@ -3,7 +3,7 @@ import {Card} from '@/components/ui/Card';
 import {Button} from '@/components/ui/Button';
 import {motion} from 'framer-motion';
 import {apiClient} from '@/api/client';
-import {DashboardStats} from '@/types';
+import type {DashboardStats} from '@/types';
 import {
   Activity,
   AlertCircle,

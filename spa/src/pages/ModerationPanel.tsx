@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Task, Skill, TaskAttachment } from '@/types';
+import type { Task, Skill, TaskAttachment } from '@/types';
 import { 
   ShieldCheck, 
   CheckCircle, 

@@ -122,19 +122,17 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 <Button 
                   type="button" 
                   variant="ghost" 
-                  fullWidth 
                   onClick={onClose}
-                  className="rounded-2xl h-12"
+                  className="rounded-2xl h-12 w-full"
                 >
                   Отмена
                 </Button>
                 <Button 
                   type="submit" 
                   variant="primary" 
-                  fullWidth 
                   isLoading={isLoading}
                   leftIcon={<Send className="w-4 h-4" />}
-                  className="rounded-2xl h-12 shadow-lg shadow-primary-600/20"
+                  className="rounded-2xl h-12 w-full shadow-lg shadow-primary-600/20"
                 >
                   Отправить отклик
                 </Button>

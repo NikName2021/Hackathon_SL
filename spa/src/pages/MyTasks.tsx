@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { Task } from '@/types';
+import type { Task } from '@/types';
 import { 
   Clock, 
   CheckCircle2, 
@@ -13,7 +13,6 @@ import {
   Users, 
   ShieldAlert, 
   Edit, 
-  ArrowRight, 
   MessageSquare,
   Paperclip,
   Tag,
@@ -252,7 +251,7 @@ export const MyTasks: React.FC = () => {
                         );
                       }
                       
-                      if (task.status === 'in_progress' && appStatus !== 'accepted') {
+                      if (task.status === 'in_progress') {
                         return (
                           <div className="px-4 py-2 bg-surface-50 dark:bg-surface-800 text-surface-500 rounded-xl text-sm font-medium border border-surface-200 dark:border-surface-700">
                             Место занято

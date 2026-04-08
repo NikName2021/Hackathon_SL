@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import { RecommendedTask } from '@/types';
+import type { RecommendedTask } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ChevronRight, Award, User, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -140,9 +140,8 @@ export const RecommendationSection: React.FC = () => {
       {hasMore && (
         <Button 
           variant="outline" 
-          fullWidth 
           onClick={handleLoadMore}
-          className="py-3 text-gray-600 hover:text-blue-600"
+          className="w-full py-3 text-gray-600 hover:text-blue-600"
         >
           Показать еще варианты
         </Button>

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,7 +13,7 @@ class TaskCreateDTO(BaseModel):
     category_id: int | None = None
     owner_id: int
     points_reward: int = 0
-    deadline: str | None = None
+    deadline: datetime | None = None
 
 
 class TaskRepository:
@@ -21,6 +22,7 @@ class TaskRepository:
         stmt = select(Task).options(
             selectinload(Task.owner).selectinload(User.skills),
             selectinload(Task.owner).selectinload(User.achievements),
+            selectinload(Task.assignee),
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -46,6 +48,7 @@ class TaskRepository:
         stmt = select(Task).where(Task.owner_id == owner_id).options(
             selectinload(Task.owner).selectinload(User.skills),
             selectinload(Task.owner).selectinload(User.achievements),
+            selectinload(Task.assignee),
             selectinload(Task.category), 
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -63,6 +66,7 @@ class TaskRepository:
         ).options(
             selectinload(Task.owner).selectinload(User.skills),
             selectinload(Task.owner).selectinload(User.achievements),
+            selectinload(Task.assignee),
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -78,6 +82,7 @@ class TaskRepository:
         stmt = select(Task).where(Task.id == task_id).options(
             selectinload(Task.owner).selectinload(User.skills),
             selectinload(Task.owner).selectinload(User.achievements),
+            selectinload(Task.assignee),
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -147,6 +152,15 @@ class TaskRepository:
         return task
 
     @staticmethod
+    async def assign_student(task_id: int, student_id: int, session: AsyncSession) -> Task | None:
+        task = await TaskRepository.get_by_id(task_id, session)
+        if task:
+            task.assignee_id = student_id
+            await session.commit()
+            return await TaskRepository.get_by_id(task_id, session)
+        return task
+
+    @staticmethod
     async def cancel_all_by_owner(owner_id: int, session: AsyncSession):
         stmt = select(Task).where(Task.owner_id == owner_id, Task.status != TaskStatus.COMPLETED)
         result = await session.execute(stmt)
@@ -209,6 +223,19 @@ class ApplicationRepository:
             # Re-fetch with fresh relationships after commit
             return await ApplicationRepository.get_by_id(app_id, session)
         return app
+
+    @staticmethod
+    async def reject_pending_for_task_except(task_id: int, keep_app_id: int, session: AsyncSession):
+        stmt = select(TaskApplication).where(
+            TaskApplication.task_id == task_id,
+            TaskApplication.id != keep_app_id,
+            TaskApplication.status == ApplicationStatus.PENDING
+        )
+        result = await session.execute(stmt)
+        apps = result.scalars().all()
+        for app in apps:
+            app.status = ApplicationStatus.REJECTED
+        await session.commit()
 
     @staticmethod
     async def reject_all_by_student(student_id: int, session: AsyncSession):

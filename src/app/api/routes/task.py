@@ -29,7 +29,7 @@ async def create_task(
 async def update_task(
     task_id: int,
     task_data: TaskUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.update_task(task_id, current_user.id, task_data, db)
@@ -67,6 +67,15 @@ async def get_my_tasks(
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.get_my_tasks(current_user.id, current_user.role, db)
+
+
+@router.get("/{task_id}", response_model=TaskResponse)
+async def get_task_by_id(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.get_task_for_user(task_id, current_user.id, current_user.role, db)
 
 
 @router.get("/applications/pending", response_model=List[ApplicationResponse])
@@ -169,7 +178,6 @@ async def complete_task(
     current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
     db: AsyncSession = Depends(async_get_db)
 ):
-    # This was a placeholder, now covered by review_task with approval
     return await TaskService.complete_task(task_id, current_user.id, db)
 
 

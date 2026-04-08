@@ -23,7 +23,7 @@ COPY nginx/local_nginx.conf /etc/nginx/conf.d/default.conf
 RUN rm -rf ./*
 
 # Copy static assets from build stage (Vite uses 'dist')
-COPY --from=build /app/dist .
+COPY --from=build /app/build .
 
 EXPOSE 80
 ENTRYPOINT ["nginx", "-g", "daemon off;"]

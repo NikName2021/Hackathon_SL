@@ -32,8 +32,8 @@ services:
       - ./src/app/uploads:/app/uploads
     depends_on:
       - postgres_pr
-    expose:
-      - 8000
+    ports:
+      - "8000:8000"
     networks:
       - hackathon_SL_net
 

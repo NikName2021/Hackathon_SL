@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -38,11 +39,23 @@ async def update_task(
 @router.get("/", response_model=List[TaskResponse])
 async def get_tasks(
     category_id: int | None = None,
+    min_points: int | None = None,
+    max_points: int | None = None,
+    deadline_before: datetime | None = None,
+    deadline_after: datetime | None = None,
     current_user: User | None = Depends(get_current_user_optional),
     db: AsyncSession = Depends(async_get_db)
 ):
     user_id = current_user.id if current_user else None
-    return await TaskService.get_available_tasks(db, category_id=category_id, user_id=user_id)
+    return await TaskService.get_available_tasks_filtered(
+        db,
+        category_id=category_id,
+        user_id=user_id,
+        min_points=min_points,
+        max_points=max_points,
+        deadline_before=deadline_before,
+        deadline_after=deadline_after,
+    )
 
 
 @router.get("/recommendations", response_model=List[RecommendedTaskResponse])
@@ -67,15 +80,6 @@ async def get_my_tasks(
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.get_my_tasks(current_user.id, current_user.role, db)
-
-
-@router.get("/{task_id}", response_model=TaskResponse)
-async def get_task_by_id(
-    task_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(async_get_db)
-):
-    return await TaskService.get_task_for_user(task_id, current_user.id, current_user.role, db)
 
 
 @router.get("/applications/pending", response_model=List[ApplicationResponse])
@@ -199,6 +203,15 @@ async def review_task(
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.review_task(task_id, current_user.id, review_data, db)
+
+
+@router.get("/{task_id}", response_model=TaskResponse)
+async def get_task_by_id(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.get_task_for_user(task_id, current_user.id, current_user.role, db)
 
 
 @router.post("/{task_id}/attachments", response_model=List[TaskAttachmentResponse])

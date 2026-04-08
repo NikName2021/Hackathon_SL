@@ -67,6 +67,8 @@ class AuthResponse(BaseModel):
 class TaskCreate(BaseModel):
     title: str
     description: str | None = None
+    acceptance_criteria: str | None = None
+    performer_requirements: str | None = None
     category_id: int | None = None
     points_reward: int = 0
     deadline: datetime | None = None
@@ -76,6 +78,8 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    acceptance_criteria: Optional[str] = None
+    performer_requirements: Optional[str] = None
     category_id: Optional[int] = None
     points_reward: Optional[int] = None
     deadline: Optional[datetime] = None
@@ -119,6 +123,8 @@ class TaskResponse(BaseModel):
     id: int
     title: str
     description: str | None
+    acceptance_criteria: str | None = None
+    performer_requirements: str | None = None
     status: TaskStatus
     points_reward: int
     deadline: datetime | None

@@ -125,6 +125,8 @@ class Task(DeclBase):
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
     description = Column(String)
+    acceptance_criteria = Column(String, nullable=True)
+    performer_requirements = Column(String, nullable=True)
     category_id = Column(Integer, ForeignKey("category.id"))
     owner_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     assignee_id = Column(Integer, ForeignKey("user.id"), nullable=True)
@@ -237,4 +239,10 @@ async def create_tables(engine: AsyncEngine):
         await conn.run_sync(DeclBase.metadata.create_all)
         await conn.execute(
             text('ALTER TABLE task ADD COLUMN IF NOT EXISTS assignee_id INTEGER REFERENCES "user"(id)')
+        )
+        await conn.execute(
+            text("ALTER TABLE task ADD COLUMN IF NOT EXISTS acceptance_criteria VARCHAR")
+        )
+        await conn.execute(
+            text("ALTER TABLE task ADD COLUMN IF NOT EXISTS performer_requirements VARCHAR")
         )

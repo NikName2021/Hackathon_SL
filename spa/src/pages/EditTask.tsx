@@ -1,135 +1,161 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Save, ArrowLeft, Loader2, X, Upload, Image as ImageIcon, FileText, Trash2 } from 'lucide-react';
+
+import { apiClient } from '@/api/client';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { apiClient } from '@/api/client';
-import type { Category, Task, Skill, TaskAttachment } from '@/types';
-import { Save, ArrowLeft, Loader2, X, Upload, Image as ImageIcon, FileText, Trash2 } from 'lucide-react';
-
 import { useNotification } from '@/context/NotificationContext';
+import type { Category, Skill, Task, TaskAttachment } from '@/types';
+
+const toDatetimeLocal = (value?: string): string => {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toISOString().slice(0, 16);
+};
 
 export const EditTask: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [pointsReward, setPointsReward] = useState('10');
-  const [categoryId, setCategoryId] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const [skills, setSkills] = useState<string[]>([]);
-  const [newSkill, setNewSkill] = useState('');
-  const [allSkills, setAllSkills] = useState<Skill[]>([]);
-  
-  const [existingAttachments, setExistingAttachments] = useState<TaskAttachment[]>([]);
-  const [newFiles, setNewFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const navigate = useNavigate();
   const { showNotification } = useNotification();
 
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState('');
+  const [performerRequirements, setPerformerRequirements] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [pointsReward, setPointsReward] = useState('10');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
+  const [allSkills, setAllSkills] = useState<Skill[]>([]);
+
+  const [existingAttachments, setExistingAttachments] = useState<TaskAttachment[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const fetchData = async () => {
+      if (!id) {
+        navigate('/tasks/my');
+        return;
+      }
+
       try {
-        const [catsRes, taskDetailRes, skillsRes] = await Promise.all([
+        const [categoriesRes, taskRes, skillsRes] = await Promise.all([
           apiClient.get<Category[]>('/categories/'),
           apiClient.get<Task>(`/tasks/${id}`),
           apiClient.get<Skill[]>('/skills/')
         ]);
-        
-        setCategories(catsRes.data);
+
+        setCategories(categoriesRes.data);
         setAllSkills(skillsRes.data);
-        
-        const taskData = taskDetailRes.data;
-        setTitle(taskData.title);
-        setDescription(taskData.description || '');
-        setPointsReward(String(taskData.points_reward));
-        setCategoryId(String(taskData.category?.id || ''));
-        setExistingAttachments(taskData.attachments || []);
-        
-        if (taskData.skills) {
-          setSkills(taskData.skills.map((s: any) => typeof s === 'string' ? s : s.name));
-        }
-        
+
+        const task = taskRes.data;
+        setTitle(task.title);
+        setDescription(task.description || '');
+        setAcceptanceCriteria(task.acceptance_criteria || '');
+        setPerformerRequirements(task.performer_requirements || '');
+        setDeadline(toDatetimeLocal(task.deadline));
+        setPointsReward(String(task.points_reward));
+        setCategoryId(String(task.category?.id || ''));
+        setExistingAttachments(task.attachments || []);
+        setSkills((task.skills || []).map((skill) => skill.name));
       } catch (e) {
-        console.error('Failed to load task data');
+        console.error('Failed to load task data:', e);
         showNotification('error', 'Не удалось загрузить данные задачи');
         navigate('/tasks/my');
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchData();
   }, [id, navigate, showNotification]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id) {
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // 1. Update basic task data
       await apiClient.patch(`/tasks/${id}`, {
         title,
         description,
+        acceptance_criteria: acceptanceCriteria.trim() || null,
+        performer_requirements: performerRequirements.trim() || null,
         points_reward: parseInt(pointsReward, 10),
-        category_id: parseInt(categoryId, 10),
-        skills: skills,
+        category_id: categoryId ? parseInt(categoryId, 10) : null,
+        deadline: deadline ? new Date(deadline).toISOString() : null,
+        skills
       });
 
-      // 2. Upload new attachments if any
       if (newFiles.length > 0) {
         const formData = new FormData();
-        newFiles.forEach(file => {
-          formData.append('files', file);
-        });
+        newFiles.forEach((file) => formData.append('files', file));
         await apiClient.post(`/tasks/${id}/attachments`, formData);
       }
 
-      showNotification('success', 'Задача успешно обновлена!');
+      showNotification('success', 'Задача обновлена');
       navigate('/tasks/my');
     } catch (e: any) {
-      const errorDetail = e.response?.data?.detail;
-      const errorMessage = typeof errorDetail === 'string' 
-        ? errorDetail 
-        : (Array.isArray(errorDetail) ? errorDetail[0]?.msg : 'Ошибка при сохранении задачи');
-      
-      showNotification('error', errorMessage);
+      const detail = e.response?.data?.detail;
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail) && detail[0]?.msg
+          ? detail[0].msg
+          : 'Ошибка при сохранении задачи';
+      showNotification('error', message);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleAddSkill = () => {
-    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      setSkills([...skills, newSkill.trim()]);
+    const value = newSkill.trim();
+    if (value && !skills.includes(value)) {
+      setSkills((prev) => [...prev, value]);
       setNewSkill('');
     }
   };
 
-  const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter(s => s !== skillToRemove));
+  const removeSkill = (skill: string) => {
+    setSkills((prev) => prev.filter((item) => item !== skill));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      setNewFiles(prev => [...prev, ...selectedFiles]);
+    if (!e.target.files) {
+      return;
     }
+    setNewFiles((prev) => [...prev, ...Array.from(e.target.files as FileList)]);
   };
 
   const removeNewFile = (index: number) => {
-    setNewFiles(prev => prev.filter((_, i) => i !== index));
+    setNewFiles((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const deleteExistingAttachment = async (attachmentId: number) => {
-    if (!confirm('Вы уверены, что хотите удалить это вложение?')) return;
-    
+    if (!confirm('Удалить это вложение?')) {
+      return;
+    }
     try {
       await apiClient.delete(`/tasks/attachments/${attachmentId}`);
-      setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
-    } catch (e) {
-      alert('Ошибка при удалении вложения');
+      setExistingAttachments((prev) => prev.filter((item) => item.id !== attachmentId));
+    } catch {
+      showNotification('error', 'Не удалось удалить вложение');
     }
   };
 
@@ -149,38 +175,58 @@ export const EditTask: React.FC = () => {
         </Button>
         <h1 className="text-3xl font-bold">Редактирование задачи</h1>
       </div>
-      
+
       <Card>
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             label="Название задачи"
-            placeholder="Например: Спроектировать базу данных"
             value={title}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
             required
           />
-          
+
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-surface-800 dark:text-surface-100 ml-1">Описание задачи</label>
             <textarea
               className="glass-input w-full"
-              rows={6}
+              rows={5}
               value={description}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
               required
             />
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-surface-800 dark:text-surface-100 ml-1">Критерии приемки</label>
+            <textarea
+              className="glass-input w-full"
+              rows={3}
+              value={acceptanceCriteria}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setAcceptanceCriteria(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-surface-800 dark:text-surface-100 ml-1">Требования к исполнителю</label>
+            <textarea
+              className="glass-input w-full"
+              rows={3}
+              value={performerRequirements}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPerformerRequirements(e.target.value)}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Очки (Награда)"
+              label="Очки (награда)"
               type="number"
               min="1"
               value={pointsReward}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPointsReward(e.target.value)}
               required
             />
-            
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-surface-800 dark:text-surface-100 ml-1">Категория</label>
               <select
@@ -189,29 +235,38 @@ export const EditTask: React.FC = () => {
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCategoryId(e.target.value)}
                 required
               >
-                {categories.map((cat) => (
-                  <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={String(category.id)}>
+                    {category.name}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Skills Section */}
+          <Input
+            label="Дедлайн"
+            type="datetime-local"
+            value={deadline}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeadline(e.target.value)}
+            required
+          />
+
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/5">
             <h3 className="text-sm font-medium text-surface-800 dark:text-surface-100 flex items-center justify-between">
               Требуемые навыки
-              <span className="text-[10px] font-normal text-surface-400">Выберите из списка или введите новый</span>
+              <span className="text-[10px] font-normal text-surface-400">Выберите из списка или добавьте вручную</span>
             </h3>
-            
+
             <div className="flex flex-wrap gap-2">
-              {skills.map(skill => (
-                <span 
-                  key={skill} 
+              {skills.map((skill) => (
+                <span
+                  key={skill}
                   className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 rounded-full text-sm font-medium border border-primary-100 dark:border-primary-800"
                 >
                   {skill}
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => removeSkill(skill)}
                     className="p-0.5 hover:bg-primary-200 dark:hover:bg-primary-800 rounded-full transition-colors"
                   >
@@ -236,37 +291,40 @@ export const EditTask: React.FC = () => {
                   }}
                 />
                 <datalist id="edit-skills">
-                  {allSkills.map(s => <option key={s.id} value={s.name} />)}
+                  {allSkills.map((skill) => (
+                    <option key={skill.id} value={skill.name} />
+                  ))}
                 </datalist>
               </div>
               <Button type="button" variant="outline" onClick={handleAddSkill} className="h-[50px]">
-                 Добавить
+                Добавить
               </Button>
             </div>
           </div>
 
-          {/* Attachments Section */}
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/5">
             <h3 className="text-sm font-medium text-surface-800 dark:text-surface-100 ml-1">Вложения</h3>
-            
-            {/* Existing Attachments */}
+
             {existingAttachments.length > 0 && (
               <div className="grid grid-cols-1 gap-2 mb-4">
-                {existingAttachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between p-3 bg-surface-50 dark:bg-white/5 border border-surface-200/50 dark:border-white/5 rounded-xl">
+                {existingAttachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between p-3 bg-surface-50 dark:bg-white/5 border border-surface-200/50 dark:border-white/5 rounded-xl"
+                  >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      {att.file_type === 'image' ? (
+                      {attachment.file_type === 'image' ? (
                         <ImageIcon className="w-5 h-5 text-blue-500 shrink-0" />
                       ) : (
                         <FileText className="w-5 h-5 text-surface-400 shrink-0" />
                       )}
-                      <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-sm truncate text-primary-600 hover:underline">
-                        {att.filename}
+                      <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="text-sm truncate text-primary-600 hover:underline">
+                        {attachment.filename}
                       </a>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => deleteExistingAttachment(att.id)}
+                    <button
+                      type="button"
+                      onClick={() => deleteExistingAttachment(attachment.id)}
                       className="text-surface-400 hover:text-red-500 transition-colors p-1"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -276,32 +334,34 @@ export const EditTask: React.FC = () => {
               </div>
             )}
 
-            {/* New Files Upload */}
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 transition-colors bg-surface-50/30 dark:bg-white/5"
             >
               <Upload className="w-6 h-6 text-surface-400 mb-2" />
               <p className="text-xs text-surface-600 dark:text-surface-400 text-center">Нажмите, чтобы добавить новые файлы</p>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                className="hidden" 
-                multiple 
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                multiple
               />
             </div>
 
             {newFiles.length > 0 && (
               <div className="grid grid-cols-1 gap-2">
                 {newFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-white dark:bg-white/5 border border-primary-100 dark:border-primary-900/30 rounded-xl">
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="flex items-center justify-between p-3 bg-white dark:bg-white/5 border border-primary-100 dark:border-primary-900/30 rounded-xl"
+                  >
                     <div className="flex items-center gap-3 overflow-hidden">
                       <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
                       <span className="text-sm truncate text-surface-700 dark:text-surface-200">{file.name}</span>
                     </div>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => removeNewFile(idx)}
                       className="text-surface-400 hover:text-red-500 transition-colors"
                     >

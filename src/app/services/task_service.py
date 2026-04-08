@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,6 +88,27 @@ class TaskService:
             status=TaskStatus.OPEN,
             category_id=category_id,
             exclude_student_id=user_id,
+        )
+    
+    @staticmethod
+    async def get_available_tasks_filtered(
+        session: AsyncSession,
+        category_id: int | None = None,
+        user_id: int | None = None,
+        min_points: int | None = None,
+        max_points: int | None = None,
+        deadline_before: datetime | None = None,
+        deadline_after: datetime | None = None,
+    ):
+        return await TaskRepository.get_all(
+            session,
+            status=TaskStatus.OPEN,
+            category_id=category_id,
+            exclude_student_id=user_id,
+            min_points=min_points,
+            max_points=max_points,
+            deadline_before=deadline_before,
+            deadline_after=deadline_after,
         )
 
     @staticmethod

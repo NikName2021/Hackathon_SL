@@ -10,6 +10,8 @@ from database.all_models import Task, TaskStatus, TaskApplication, ApplicationSt
 class TaskCreateDTO(BaseModel):
     title: str
     description: str | None = None
+    acceptance_criteria: str | None = None
+    performer_requirements: str | None = None
     category_id: int | None = None
     owner_id: int
     points_reward: int = 0
@@ -18,7 +20,16 @@ class TaskCreateDTO(BaseModel):
 
 class TaskRepository:
     @staticmethod
-    async def get_all(session: AsyncSession, status: TaskStatus | None = TaskStatus.OPEN, category_id: int | None = None, exclude_student_id: int | None = None):
+    async def get_all(
+        session: AsyncSession,
+        status: TaskStatus | None = TaskStatus.OPEN,
+        category_id: int | None = None,
+        exclude_student_id: int | None = None,
+        min_points: int | None = None,
+        max_points: int | None = None,
+        deadline_before: datetime | None = None,
+        deadline_after: datetime | None = None,
+    ):
         stmt = select(Task).options(
             selectinload(Task.owner).selectinload(User.skills),
             selectinload(Task.owner).selectinload(User.achievements),
@@ -34,6 +45,14 @@ class TaskRepository:
             stmt = stmt.where(Task.status == status)
         if category_id:
             stmt = stmt.where(Task.category_id == category_id)
+        if min_points is not None:
+            stmt = stmt.where(Task.points_reward >= min_points)
+        if max_points is not None:
+            stmt = stmt.where(Task.points_reward <= max_points)
+        if deadline_before is not None:
+            stmt = stmt.where(Task.deadline <= deadline_before)
+        if deadline_after is not None:
+            stmt = stmt.where(Task.deadline >= deadline_after)
         
         if exclude_student_id:
             # Subquery to find task IDs already applied to by this student

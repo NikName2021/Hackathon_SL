@@ -45,7 +45,7 @@ export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn
 export interface Category {
   id: number;
   name: string;
-  description: string;
+  description?: string;
 }
 
 export interface TaskApplication {
@@ -68,6 +68,8 @@ export interface Task {
   id: number;
   title: string;
   description?: string;
+  acceptance_criteria?: string;
+  performer_requirements?: string;
   category: Category;
   owner: User;
   applications?: TaskApplication[];

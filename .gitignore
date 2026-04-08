@@ -4,7 +4,6 @@
 .idea
 /spa/node_modules
 /spa/.env.production
-spa/package-lock.json
 /example/
 /spa/build/
 /src/app/worker/old_files/
@@ -32,3 +31,4 @@ __pycache__/
 src/pytest-cache-files-*/
 logs/
 /src/app/uploads/
+.env.example

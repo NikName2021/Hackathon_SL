@@ -1,22 +1,15 @@
-from typing import List
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 
 from core.config import async_get_db, logger
 from schemas.task import (
-    ApplicationCreate,
-    ApplicationResponse,
-    DashboardStats,
-    SubmissionCreate,
-    SubmissionResponse,
-    TaskCreate,
-    TaskResponse,
-    TaskReview,
-    TaskUpdate,
-    build_task_response,
+    TaskCreate, TaskResponse, ApplicationCreate, ApplicationResponse, 
+    SubmissionCreate, SubmissionResponse, TaskReview, DashboardStats, TaskUpdate,
+    RecommendedTaskResponse, TaskAttachmentResponse
 )
 from services.task_service import TaskService
+from services.recommendation_service import RecommendationService
 from helpers.auth import get_current_user, RoleChecker, get_current_user_optional
 from database.all_models import User, Role, TaskStatus
 
@@ -36,7 +29,7 @@ async def create_task(
 async def update_task(
     task_id: int,
     task_data: TaskUpdate,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.update_task(task_id, current_user.id, task_data, db)
@@ -50,6 +43,22 @@ async def get_tasks(
 ):
     user_id = current_user.id if current_user else None
     return await TaskService.get_available_tasks(db, category_id=category_id, user_id=user_id)
+
+
+@router.get("/recommendations", response_model=List[RecommendedTaskResponse])
+async def get_recommendations(
+    limit: int = 5,
+    offset: int = 0,
+    current_user: User = Depends(RoleChecker([Role.STUDENT])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    """
+    Получить рекомендованные задачи для студента на основе его навыков.
+    Сначала топ-5, затем по пагинации.
+    """
+    return await RecommendationService.get_recommendations(
+        current_user.id, db, limit=limit, offset=offset
+    )
 
 
 @router.get("/my", response_model=List[TaskResponse])
@@ -86,7 +95,12 @@ async def get_dashboard_stats(
     my_tasks = await TaskService.get_my_tasks(current_user.id, current_user.role, db)
     
     stats = DashboardStats(
-        active_tasks=len([t for t in my_tasks if t.status in [TaskStatus.IN_PROGRESS, TaskStatus.OPEN]]),
+        active_tasks=len([t for t in my_tasks if t.status in [
+            TaskStatus.IN_PROGRESS, 
+            TaskStatus.OPEN, 
+            TaskStatus.PENDING_APPROVAL,
+            TaskStatus.CANCELLED
+        ]]),
         pending_reviews=len([t for t in my_tasks if t.status == TaskStatus.REVIEW]),
         completed_tasks=len([t for t in my_tasks if t.status == TaskStatus.COMPLETED]),
         total_points=current_user.points
@@ -101,18 +115,6 @@ async def get_dashboard_stats(
         stats.pending_moderation = len(list(mod))
         
     return stats
-
-
-@router.get("/{task_id}", response_model=TaskResponse)
-async def get_task(
-    task_id: int,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
-    db: AsyncSession = Depends(async_get_db)
-):
-    task = await TaskService._get_task_or_404(task_id, db)
-    if current_user.role != Role.ADMIN and task.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only the task owner can view this task")
-    return build_task_response(task)
 
 
 @router.post("/{task_id}/approve", response_model=TaskResponse)
@@ -152,6 +154,15 @@ async def approve_application(
     return await TaskService.approve_student(app_id, current_user.id, db)
 
 
+@router.post("/applications/{app_id}/reject", response_model=ApplicationResponse)
+async def reject_application(
+    app_id: int,
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.reject_student(app_id, current_user.id, db)
+
+
 @router.post("/{task_id}/complete", response_model=TaskResponse)
 async def complete_task(
     task_id: int,
@@ -180,3 +191,22 @@ async def review_task(
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.review_task(task_id, current_user.id, review_data, db)
+
+
+@router.post("/{task_id}/attachments", response_model=List[TaskAttachmentResponse])
+async def upload_attachments(
+    task_id: int,
+    files: List[UploadFile] = File(...),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.upload_attachments(task_id, files, db)
+
+
+@router.delete("/attachments/{attachment_id}")
+async def delete_attachment(
+    attachment_id: int,
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.delete_attachment(attachment_id, db)

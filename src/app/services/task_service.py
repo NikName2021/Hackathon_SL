@@ -1,168 +1,131 @@
-from fastapi import HTTPException
+import os
+import uuid
+import shutil
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from database.all_models import ApplicationStatus, Role, TaskStatus
-from repositories.task import (
-    ApplicationRepository,
-    SubmissionRepository,
-    TaskCreateDTO,
-    TaskRepository,
-    TransactionRepository,
-)
+from fastapi import HTTPException
+from database.all_models import TaskStatus, ApplicationStatus, User, Role
+from repositories.task import TaskRepository, TaskCreateDTO, ApplicationRepository, SubmissionRepository, TransactionRepository, AttachmentRepository
 from repositories.user import UserRepository
 from services.gamification_service import GamificationService
-from schemas.task import (
-    ApplicationCreate,
-    SubmissionCreate,
-    TaskCreate,
-    TaskReview,
-    TaskUpdate,
-    build_application_response,
-    build_task_response,
-)
+from schemas.task import TaskCreate, ApplicationCreate, SubmissionCreate, TaskReview, TaskUpdate
 
 
 class TaskService:
     @staticmethod
-    def _ensure_status(task, allowed_statuses: set[TaskStatus], detail: str) -> None:
-        if task.status not in allowed_statuses:
-            raise HTTPException(status_code=400, detail=detail)
-
-    @staticmethod
-    def _ensure_owner(task, owner_id: int, detail: str) -> None:
-        if task.owner_id != owner_id:
-            raise HTTPException(status_code=403, detail=detail)
-
-    @staticmethod
-    def _build_task_list(tasks):
-        return [build_task_response(task) for task in tasks]
-
-    @staticmethod
-    def _build_application_list(applications):
-        return [build_application_response(application) for application in applications]
-
-    @staticmethod
-    async def _get_task_or_404(task_id: int, session: AsyncSession):
-        task = await TaskRepository.get_by_id(task_id, session)
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+    async def create_task(task_data: TaskCreate, owner_id: int, session: AsyncSession):
+        dto = TaskCreateDTO(
+            **task_data.model_dump(exclude={"skills"}),
+            owner_id=owner_id
+        )
+        task = await TaskRepository.create(dto, session, skill_names=task_data.skills)
+        # Initial status for moderation
+        await TaskRepository.update_status(task.id, TaskStatus.PENDING_APPROVAL, session)
         return task
 
     @staticmethod
-    async def _get_application_or_404(app_id: int, session: AsyncSession):
-        application = await ApplicationRepository.get_by_id(app_id, session)
-        if not application:
-            raise HTTPException(status_code=404, detail="Application not found")
-        return application
-
-    @staticmethod
-    async def create_task(task_data: TaskCreate, owner_id: int, session: AsyncSession):
-        dto = TaskCreateDTO(**task_data.model_dump(), owner_id=owner_id)
-        task = await TaskRepository.create(dto, session)
-        await TaskRepository.update_status(task.id, TaskStatus.PENDING_APPROVAL, session)
-        task.status = TaskStatus.PENDING_APPROVAL
-        return build_task_response(task)
-
-    @staticmethod
     async def update_task(task_id: int, owner_id: int, update_data: TaskUpdate, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-        TaskService._ensure_owner(task, owner_id, "Only the task owner can update the task")
-        TaskService._ensure_status(
-            task,
-            {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN},
-            "Only pending or open tasks can be updated",
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+        if task.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Вы не являетесь владельцем задачи")
+        
+        updated_task = await TaskRepository.update(
+            task_id, 
+            update_data.model_dump(exclude_unset=True, exclude={"skills"}), 
+            session,
+            skill_names=update_data.skills
         )
-
-        updated_task = await TaskRepository.update(task_id, update_data.model_dump(exclude_unset=True), session)
-        return build_task_response(updated_task)
+        return updated_task
 
     @staticmethod
     async def approve_task(task_id: int, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-        TaskService._ensure_status(task, {TaskStatus.PENDING_APPROVAL}, "Only pending tasks can be approved")
-        updated_task = await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
-        return build_task_response(updated_task)
+        return await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
 
     @staticmethod
     async def reject_task(task_id: int, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-        TaskService._ensure_status(
-            task,
-            {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN},
-            "Task cannot be rejected in its current status",
-        )
-        updated_task = await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session)
-        return build_task_response(updated_task)
+        return await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session)
 
     @staticmethod
     async def get_available_tasks(session: AsyncSession, category_id: int | None = None, user_id: int | None = None):
-        tasks = await TaskRepository.get_all(
-            session,
-            status=TaskStatus.OPEN,
-            category_id=category_id,
-            exclude_student_id=user_id,
-        )
-        return TaskService._build_task_list(tasks)
+        return await TaskRepository.get_all(session, status=TaskStatus.OPEN, category_id=category_id, exclude_student_id=user_id)
 
     @staticmethod
     async def get_my_tasks(user_id: int, role: Role, session: AsyncSession):
         if role == Role.STUDENT:
-            tasks = await TaskRepository.get_by_student(user_id, session)
+            return await TaskRepository.get_by_student(user_id, session)
         else:
-            tasks = await TaskRepository.get_by_owner(user_id, session)
-        return TaskService._build_task_list(tasks)
+            return await TaskRepository.get_by_owner(user_id, session)
 
     @staticmethod
     async def get_incoming_applications(user_id: int, session: AsyncSession):
-        applications = await ApplicationRepository.get_pending_for_owner(user_id, session)
-        return TaskService._build_application_list(applications)
+        return await ApplicationRepository.get_pending_for_owner(user_id, session)
 
     @staticmethod
     async def get_tasks_for_moderation(session: AsyncSession):
-        tasks = await TaskRepository.get_all(session, status=TaskStatus.PENDING_APPROVAL)
-        return TaskService._build_task_list(tasks)
+        return await TaskRepository.get_all(session, status=TaskStatus.PENDING_APPROVAL)
 
     @staticmethod
     async def apply_for_task(task_id: int, student_id: int, app_data: ApplicationCreate, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+        
         if task.status != TaskStatus.OPEN:
-            raise HTTPException(status_code=400, detail="Задача недоступна для отклика")
+            raise HTTPException(status_code=400, detail="Задача не доступна для отклика")
 
-        existing_application = await ApplicationRepository.get_by_task_and_student(task_id, student_id, session)
-        if existing_application:
-            raise HTTPException(status_code=400, detail="Вы уже откликнулись на эту задачу")
+        # Check if already applied
+        for app in task.applications:
+            if app.student_id == student_id:
+                raise HTTPException(status_code=400, detail="Вы уже откликнулись на эту задачу")
 
-        application = await ApplicationRepository.create(task_id, student_id, app_data.message, session)
-        return build_application_response(application)
+        return await ApplicationRepository.create(task_id, student_id, app_data.message, session)
 
     @staticmethod
     async def approve_student(app_id: int, owner_id: int, session: AsyncSession):
-        application = await TaskService._get_application_or_404(app_id, session)
-        task = await TaskService._get_task_or_404(application.task_id, session)
-        TaskService._ensure_owner(task, owner_id, "Only the task owner can approve an application")
-        TaskService._ensure_status(task, {TaskStatus.OPEN}, "Student can be assigned only to an open task")
+        app = await ApplicationRepository.get_by_id(app_id, session)
+        if not app:
+            raise HTTPException(status_code=404, detail="Отклик не найден")
+        
+        task = await TaskRepository.get_by_id(app.task_id, session)
+        if task.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Только владелец задачи может выбирать исполнителя")
 
-        if task.assignee_id is not None:
-            raise HTTPException(status_code=400, detail="Task already has an assigned student")
-        if application.status != ApplicationStatus.PENDING:
-            raise HTTPException(status_code=400, detail="Only pending applications can be approved")
-
+        # Update application status
         await ApplicationRepository.update_status(app_id, ApplicationStatus.ACCEPTED, session)
-        await ApplicationRepository.reject_pending_for_task_except(task.id, app_id, session)
-        await TaskRepository.assign_student(task.id, application.student_id, session)
+        
+        # Update task status
         await TaskRepository.update_status(task.id, TaskStatus.IN_PROGRESS, session)
+        
+        return app
 
-        updated_application = await ApplicationRepository.get_by_id(app_id, session)
-        return build_application_response(updated_application)
+    @staticmethod
+    async def reject_student(app_id: int, owner_id: int, session: AsyncSession):
+        app = await ApplicationRepository.get_by_id(app_id, session)
+        if not app:
+            raise HTTPException(status_code=404, detail="Отклик не найден")
+        
+        task = await TaskRepository.get_by_id(app.task_id, session)
+        if task.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Только владелец задачи может отклонять отклики")
+
+        return await ApplicationRepository.update_status(app_id, ApplicationStatus.REJECTED, session)
 
     @staticmethod
     async def submit_task(task_id: int, student_id: int, submission_data: SubmissionCreate, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-        TaskService._ensure_status(task, {TaskStatus.IN_PROGRESS}, "Task can be submitted only when it is in progress")
-
-        if task.assignee_id != student_id:
-            raise HTTPException(status_code=403, detail="Only the selected student can submit this task")
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+        
+        # Verify student is the assigned performer
+        assigned = False
+        for app in task.applications:
+            if app.student_id == student_id and app.status == ApplicationStatus.ACCEPTED:
+                assigned = True
+                break
+        
+        if not assigned:
+            raise HTTPException(status_code=403, detail="Вы не являетесь исполнителем этой задачи")
 
         submission = await SubmissionRepository.create(task_id, student_id, submission_data.content, session)
         await TaskRepository.update_status(task_id, TaskStatus.REVIEW, session)
@@ -170,25 +133,29 @@ class TaskService:
 
     @staticmethod
     async def review_task(task_id: int, owner_id: int, review_data: TaskReview, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-        TaskService._ensure_owner(task, owner_id, "Only the task owner can review the submission")
-        TaskService._ensure_status(task, {TaskStatus.REVIEW}, "Task review is available only after submission")
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+        
+        if task.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Только владелец задачи может проводить ревью")
 
         submission = await SubmissionRepository.get_by_task_id(task_id, session)
         if not submission:
-            raise HTTPException(status_code=404, detail="Submission not found")
-        if task.assignee_id is None:
-            raise HTTPException(status_code=400, detail="Task does not have an assigned student")
+            raise HTTPException(status_code=404, detail="Сдача работы не найдена")
 
         if review_data.is_approved:
             await SubmissionRepository.update_review(submission.id, "approved", review_data.feedback, session)
             await TaskRepository.update_status(task_id, TaskStatus.COMPLETED, session)
+            
+            # Award points
             await UserRepository.update_points(submission.student_id, task.points_reward, session)
             await TransactionRepository.create(submission.student_id, task.points_reward, "earned", task.id, session)
-
+            
+            # Simple reputation update (MVP: 1 task = +1 reputation point)
             user = await UserRepository.get_by_id(submission.student_id, session)
             if user:
-                user.reputation += 1.0
+                user.reputation += 1.0 # Simple fixed increment for now
                 await session.commit()
                 
             # Check for achievements
@@ -196,24 +163,55 @@ class TaskService:
         else:
             await SubmissionRepository.update_review(submission.id, "rejected", review_data.feedback, session)
             await TaskRepository.update_status(task_id, TaskStatus.IN_PROGRESS, session)
-
-        updated_task = await TaskRepository.get_by_id(task_id, session)
-        return build_task_response(updated_task)
-
-    @staticmethod
-    async def complete_task(task_id: int, owner_id: int, session: AsyncSession):
-        task = await TaskService._get_task_or_404(task_id, session)
-        TaskService._ensure_owner(task, owner_id, "Only the task owner can complete the task")
-        TaskService._ensure_status(task, {TaskStatus.REVIEW}, "Task can be completed only after submission review")
-        updated_task = await TaskRepository.update_status(task_id, TaskStatus.COMPLETED, session)
-        return build_task_response(updated_task)
+        
+        return task
 
     @staticmethod
     async def ban_user(user_id: int, session: AsyncSession):
         user = await UserRepository.update_status(user_id, False, session)
         if not user:
             return None
-
+        
+        # Cancel all active tasks where user is owner
         await TaskRepository.cancel_all_by_owner(user_id, session)
+        
+        # Reject all active applications by the user
         await ApplicationRepository.reject_all_by_student(user_id, session)
+        
         return user
+
+    @staticmethod
+    async def upload_attachments(task_id: int, files: list, session: AsyncSession):
+        upload_dir = "uploads/task_attachments"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        attachments = []
+        for file in files:
+            file_ext = file.filename.split(".")[-1]
+            file_name = f"{task_id}_{uuid.uuid4().hex}.{file_ext}"
+            file_path = os.path.join(upload_dir, file_name)
+            
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            url = f"/uploads/task_attachments/{file_name}"
+            # Simple check for file type
+            file_type = "image" if file.content_type.startswith("image/") else "document"
+            
+            attachment = await AttachmentRepository.create(task_id, file.filename, url, file_type, session)
+            attachments.append(attachment)
+            
+        return attachments
+
+    @staticmethod
+    async def delete_attachment(attachment_id: int, session: AsyncSession):
+        attachment = await AttachmentRepository.get_by_id(attachment_id, session)
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Вложение не найдено")
+        
+        # Remove file from disk
+        file_path = attachment.url.lstrip("/")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        return await AttachmentRepository.delete(attachment_id, session)

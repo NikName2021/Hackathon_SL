@@ -4,9 +4,6 @@ import axios from 'axios';
 export const apiClient = axios.create({
   baseURL: '/api/v1', // Proxied by Vite to http://localhost:8000
   withCredentials: true, // Crucial for sending/receiving HttpOnly cookies
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Helper to manage access token in memory

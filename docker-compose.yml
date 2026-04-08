@@ -1,59 +1,58 @@
 services:
+
   postgres_pr:
     container_name: hackathon_mes_postgres
     image: postgres:17.6
-    restart: unless-stopped
-    env_file:
-      - src/app/.env
+    restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DATABASE}
-      TZ: Europe/Moscow
-    ports:
-      - "5450:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-hackathon_db}
+      TZ: "Europe/Moscow"
     volumes:
       - hackathon_SL_vol:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
+    ports:
+      - "5450:5432"
+    networks:
+      - hackathon_SL_net
 
-  backend:
+  hackathon_mes_backend:
     container_name: hackathon_mes_backend
     build:
       context: src
-    restart: unless-stopped
-    env_file:
-      - src/app/.env
+    restart: always
     environment:
-      APP_ENV_FILE: /app/app/.env
-      HOST: 0.0.0.0
-      PORT: 8000
-      POSTGRES_HOST: postgres_pr
-      POSTGRES_PORT: 5432
-      PYTHONUNBUFFERED: 1
-      PYTHONDONTWRITEBYTECODE: 1
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_pr:5432/${POSTGRES_DATABASE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - MEMOIZATION_FLAG=True
     volumes:
-      - ./src/app/.env:/app/app/.env:ro
+      - ./src/app/uploads:/app/uploads
     depends_on:
-      postgres_pr:
-        condition: service_healthy
-    ports:
-      - "8000:8000"
-    command: ["python", "main.py"]
+      - postgres_pr
+    expose:
+      - 8000
+    networks:
+      - hackathon_SL_net
 
   frontend:
     container_name: hackathon_mes_frontend
     build:
       context: spa
-    restart: unless-stopped
-    depends_on:
-      - backend
+    restart: always
     ports:
       - "80:80"
+    depends_on:
+      - hackathon_mes_backend
+    networks:
+      - hackathon_SL_net
 
 volumes:
   hackathon_SL_vol:
     driver: local
+
+networks:
+  hackathon_SL_net:
+    driver: bridge

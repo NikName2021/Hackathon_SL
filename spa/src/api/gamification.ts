@@ -3,17 +3,17 @@ import type { LeaderboardUser, GamificationStats, Achievement } from '@/types';
 
 export const gamificationApi = {
   getLeaderboard: async (limit: number = 10): Promise<LeaderboardUser[]> => {
-    const response = await client.get(`/v1/gamification/leaderboard?limit=${limit}`);
+    const response = await client.get(`/gamification/leaderboard?limit=${limit}`);
     return response.data;
   },
 
   getUserStats: async (): Promise<GamificationStats> => {
-    const response = await client.get('/v1/gamification/stats');
+    const response = await client.get('/gamification/stats');
     return response.data;
   },
 
   getAllAchievements: async (): Promise<Achievement[]> => {
-    const response = await client.get('/v1/gamification/achievements');
+    const response = await client.get('/gamification/achievements');
     return response.data;
   },
 };

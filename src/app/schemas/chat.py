@@ -11,6 +11,9 @@ class ChatMessageResponse(BaseModel):
     sender_id: int
     sender: UserShortResponse
     content: str
+    file_url: str | None = None
+    file_name: str | None = None
+    file_type: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -5,8 +5,15 @@ from database.all_models import ChatMessage
 
 class ChatRepository:
     @staticmethod
-    async def create(task_id: int, sender_id: int, content: str, session: AsyncSession) -> ChatMessage:
-        message = ChatMessage(task_id=task_id, sender_id=sender_id, content=content)
+    async def create(task_id: int, sender_id: int, content: str, session: AsyncSession, file_url: str | None = None, file_name: str | None = None, file_type: str | None = None) -> ChatMessage:
+        message = ChatMessage(
+            task_id=task_id, 
+            sender_id=sender_id, 
+            content=content,
+            file_url=file_url,
+            file_name=file_name,
+            file_type=file_type
+        )
         session.add(message)
         await session.commit()
         await session.refresh(message)

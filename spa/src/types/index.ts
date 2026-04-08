@@ -17,11 +17,10 @@ export interface User {
   id: number;
   email: string;
   role: Role;
-  full_name: string | null;
+  full_name: string;
   points: number;
   reputation: number;
-  is_active?: boolean;
-  created_date?: string;
+  is_active: boolean;
   bio?: string;
   avatar_url?: string;
   resume_path?: string;
@@ -40,19 +39,45 @@ export interface AuthResponse {
   status: string;
 }
 
-export type TaskStatus =
-  | 'pending_approval'
-  | 'open'
-  | 'in_progress'
-  | 'review'
-  | 'completed'
-  | 'cancelled';
-
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+export type TaskStatus = 'pending_approval' | 'open' | 'in_progress' | 'review' | 'completed' | 'cancelled';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
 
 export interface Category {
   id: number;
   name: string;
+  description: string;
+}
+
+export interface TaskApplication {
+  id: number;
+  task_id: number;
+  student_id: number;
+  message?: string;
+  status: ApplicationStatus;
+  applied_at: string;
+}
+
+export interface TaskAttachment {
+  id: number;
+  filename: string;
+  url: string;
+  file_type?: 'image' | 'document';
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  description?: string;
+  category: Category;
+  owner: User;
+  applications?: TaskApplication[];
+  points_reward: number;
+  status: TaskStatus;
+  created_at: string;
+  deadline?: string;
+  latest_submission?: Submission;
+  skills: Skill[];
+  attachments: TaskAttachment[];
 }
 
 export interface Submission {
@@ -60,40 +85,9 @@ export interface Submission {
   task_id: number;
   student_id: number;
   content: string;
-  status: string;
-  feedback?: string | null;
+  status?: string;
+  feedback?: string;
   submitted_at: string;
-}
-
-export interface TaskSummary {
-  id: number;
-  title: string;
-}
-
-export interface Application {
-  id: number;
-  task_id: number;
-  student_id: number;
-  task: TaskSummary;
-  student: User;
-  message?: string | null;
-  status: ApplicationStatus;
-  created_at: string;
-}
-
-export interface Task {
-  id: number;
-  title: string;
-  description?: string | null;
-  category?: Category | null;
-  owner: User;
-  assignee?: User | null;
-  points_reward: number;
-  status: TaskStatus;
-  created_date: string;
-  deadline?: string | null;
-  applications?: Application[];
-  latest_submission?: Submission | null;
 }
 
 export interface LeaderboardUser {
@@ -129,4 +123,16 @@ export interface DashboardStats {
   total_points: number;
   pending_applications: number;
   pending_moderation: number;
+}
+
+export interface RecommendedTask {
+  id: number;
+  title: string;
+  description?: string;
+  points_reward: number;
+  category: string;
+  owner_name: string;
+  match_score: number;
+  skills: string[];
+  attachments: TaskAttachment[];
 }

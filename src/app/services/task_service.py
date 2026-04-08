@@ -100,6 +100,18 @@ class TaskService:
         return app
 
     @staticmethod
+    async def reject_student(app_id: int, owner_id: int, session: AsyncSession):
+        app = await ApplicationRepository.get_by_id(app_id, session)
+        if not app:
+            raise HTTPException(status_code=404, detail="Отклик не найден")
+        
+        task = await TaskRepository.get_by_id(app.task_id, session)
+        if task.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Только владелец задачи может отклонять отклики")
+
+        return await ApplicationRepository.update_status(app_id, ApplicationStatus.REJECTED, session)
+
+    @staticmethod
     async def submit_task(task_id: int, student_id: int, submission_data: SubmissionCreate, session: AsyncSession):
         task = await TaskRepository.get_by_id(task_id, session)
         if not task:

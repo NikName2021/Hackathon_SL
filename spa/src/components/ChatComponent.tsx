@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { apiClient } from '@/api/client';
 import { User } from '@/types';
-import { Send, User as UserIcon, Clock, X } from 'lucide-react';
+import { Send, User as UserIcon, X, Paperclip, FileText, Download, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 
 interface Message {
@@ -13,6 +13,9 @@ interface Message {
   sender_id: number;
   sender: User;
   content: string;
+  file_url?: string;
+  file_name?: string;
+  file_type?: string;
   created_at: string;
 }
 
@@ -27,8 +30,12 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({ taskId, taskTitle,
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,6 +77,33 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({ taskId, taskTitle,
       console.error('Failed to send message:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    if (newMessage.trim()) {
+      formData.append('content', newMessage);
+      setNewMessage('');
+    }
+
+    try {
+      await apiClient.post(`/chat/${taskId}/file`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      fetchMessages();
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -127,13 +161,48 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({ taskId, taskTitle,
                         </span>
                       </div>
                       <div
-                        className={`p-3 rounded-2xl text-sm ${
+                        className={`p-3 rounded-2xl text-sm space-y-2 ${
                           isMe
                             ? 'bg-primary-600 text-white rounded-tr-none shadow-lg shadow-primary-600/10'
                             : 'bg-white dark:bg-surface-800 text-surface-900 dark:text-white rounded-tl-none border border-surface-100 dark:border-surface-700 shadow-sm'
                         }`}
                       >
-                        {msg.content}
+                        {msg.file_url && (
+                          <div className="mb-2">
+                            {msg.file_type === 'image' ? (
+                              <a 
+                                href={msg.file_url.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="block rounded-lg overflow-hidden border border-black/10 dark:border-white/10"
+                              >
+                                <img 
+                                  src={msg.file_url.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}`} 
+                                  alt={msg.file_name}
+                                  className="max-w-full h-auto max-h-48 object-cover hover:scale-105 transition-transform duration-300" 
+                                />
+                              </a>
+                            ) : (
+                              <a 
+                                href={msg.file_url.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}`} 
+                                download 
+                                className={`flex items-center gap-2 p-2 rounded-xl border ${
+                                  isMe 
+                                    ? 'bg-white/10 border-white/20 text-white' 
+                                    : 'bg-surface-50 dark:bg-surface-900 border-surface-200 dark:border-surface-700'
+                                }`}
+                              >
+                                <FileText className="w-5 h-5 opacity-70" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] font-bold truncate">{msg.file_name}</p>
+                                  <p className="text-[8px] opacity-60 uppercase font-black tracking-tighter">Скачать</p>
+                                </div>
+                                <Download className="w-4 h-4 opacity-50" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        <div>{msg.content}</div>
                       </div>
                     </div>
                   </div>
@@ -144,27 +213,48 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({ taskId, taskTitle,
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-surface-100 dark:border-surface-800 bg-white dark:bg-surface-900">
-            <div className="flex gap-2">
+          <div className="p-4 border-t border-surface-100 dark:border-surface-800 bg-white dark:bg-surface-900">
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="rounded-xl px-3 border-surface-200 dark:border-surface-700"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-primary-500" />
+                ) : (
+                  <Paperclip className="w-4 h-4 text-surface-500" />
+                )}
+              </Button>
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Введите сообщение..."
+                disabled={isUploading}
                 className="flex-1 bg-surface-50 dark:bg-surface-800 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary-500 transition-all outline-none"
               />
               <Button
                 type="submit"
                 isLoading={isLoading}
-                disabled={!newMessage.trim()}
+                disabled={!newMessage.trim() || isUploading}
                 variant="primary"
                 size="sm"
                 className="rounded-xl px-4"
               >
                 <Send className="w-4 h-4" />
               </Button>
-            </div>
-          </form>
+            </form>
+          </div>
         </Card>
       </motion.div>
     </div>

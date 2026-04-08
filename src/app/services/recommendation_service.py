@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func, desc
+from sqlalchemy import select
 from database.all_models import Task, User, Skill, TaskStatus
+from sqlalchemy.orm import selectinload
 from typing import List, Tuple
 import re
 
@@ -19,7 +20,7 @@ class RecommendationService:
         - +2 for each keyword match in title/description
         """
         # 1. Get user and their skills
-        user_stmt = select(User).where(User.id == user_id)
+        user_stmt = select(User).where(User.id == user_id).options(selectinload(User.skills))
         user_result = await session.execute(user_stmt)
         user = user_result.scalar_one_or_none()
         
@@ -31,7 +32,16 @@ class RecommendationService:
         # 2. Get all OPEN tasks
         # In a real-world scenario, we'd do this via a more efficient SQL query or ElasticSearch.
         # But for this hackathon MVP, we'll do the scoring in Python for flexibility with keyword matching.
-        tasks_stmt = select(Task).where(Task.status == TaskStatus.OPEN)
+        tasks_stmt = (
+            select(Task)
+            .where(Task.status == TaskStatus.OPEN)
+            .options(
+                selectinload(Task.applications),
+                selectinload(Task.skills),
+                selectinload(Task.category),
+                selectinload(Task.owner)
+            )
+        )
         tasks_result = await session.execute(tasks_stmt)
         all_tasks = tasks_result.scalars().all()
         

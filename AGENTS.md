@@ -24,18 +24,19 @@ A digital platform for university students and staff to manage small tasks, proj
 - [x] User registration and role-based authentication (Student, Employee, Admin).
 - [x] Task lifecycle: Creation -> Moderation -> Open -> Application -> In Progress -> Review -> Completed.
 - [x] Point awarding and basic reputation system.
-- [x] Admin dashboard for moderation and user management.
-- [x] Student dashboard for task discovery and tracking.
-- [x] Employee dashboard for task management and review.
+- [x] Admin dashboard with expandable moderation queue.
+- [x] Student dashboard with interactive task recommendations.
+- [x] Employee dashboard for owner task tracking and management.
+- [x] **New**: Cover letter support for task applications.
+- [x] **New**: Deep-linking and highlighting system for recommended tasks.
 - [x] Telegram integration placeholders.
 
 ## Missing Features / Roadmap
 - [ ] **Messenger**: Real-time communication between student and task owner.
-- [ ] **Recommendation System**: Suggesting tasks to students based on their skills/resume.
 - [ ] **Gamification**: Visual leaderboards, achievement system, and interactive stats.
 - [ ] **Knowledge Base / FAQ**: Documentation for platform use.
 - [ ] **Profile Enhancements**: Student resume upload and skill tags.
-- [ ] **UX/UI Polish**: Micro-animations, "living" indicators, and mobile responsiveness.
+- [ ] **UX/UI Polish**: Mobile responsiveness and micro-interactions.
 
 ## How to Run
 
@@ -52,6 +53,7 @@ Frontend SPA: `http://localhost:3000`
 ## Key Files to Watch
 - `src/app/database/all_models.py`: Core data structure.
 - `src/app/services/task_service.py`: Main business logic.
-- `spa/src/pages/TaskCatalog.tsx`: Main user interaction point.
-- `spa/src/pages/AdminDashboard.tsx`: Admin interface (currently debugging).
-- `spa/src/pages/CreateTask.tsx`: Task creation (to be implemented/fixed).
+- `spa/src/pages/TaskCatalog.tsx`: Main user interaction point (with highlighting).
+- `spa/src/pages/ModerationPanel.tsx`: Admin interface for task reviews.
+- `spa/src/pages/MyTasks.tsx`: Owner/Student project management dashboard.
+- `spa/src/components/ApplicationModal.tsx`: Core logic for task applications with cover letters.

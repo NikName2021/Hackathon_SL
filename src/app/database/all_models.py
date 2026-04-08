@@ -209,6 +209,9 @@ class ChatMessage(DeclBase):
     task_id = Column(Integer, ForeignKey("task.id"), nullable=False)
     sender_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     content = Column(String, nullable=False)
+    file_url = Column(String, nullable=True)
+    file_name = Column(String, nullable=True)
+    file_type = Column(String, nullable=True) # 'image' or 'file'
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     task = relationship("Task")

@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus, TaskSubmission, PointTransaction, Skill, TaskAttachment
+from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus, TaskSubmission, PointTransaction, Skill, TaskAttachment, User
 
 
 class TaskCreateDTO(BaseModel):
@@ -19,7 +19,8 @@ class TaskRepository:
     @staticmethod
     async def get_all(session: AsyncSession, status: TaskStatus | None = TaskStatus.OPEN, category_id: int | None = None, exclude_student_id: int | None = None):
         stmt = select(Task).options(
-            selectinload(Task.owner), 
+            selectinload(Task.owner).selectinload(User.skills),
+            selectinload(Task.owner).selectinload(User.achievements),
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -43,7 +44,8 @@ class TaskRepository:
     @staticmethod
     async def get_by_owner(owner_id: int, session: AsyncSession):
         stmt = select(Task).where(Task.owner_id == owner_id).options(
-            selectinload(Task.owner),
+            selectinload(Task.owner).selectinload(User.skills),
+            selectinload(Task.owner).selectinload(User.achievements),
             selectinload(Task.category), 
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -59,7 +61,8 @@ class TaskRepository:
         stmt = select(Task).join(TaskApplication).where(
             TaskApplication.student_id == student_id
         ).options(
-            selectinload(Task.owner), 
+            selectinload(Task.owner).selectinload(User.skills),
+            selectinload(Task.owner).selectinload(User.achievements),
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -73,7 +76,8 @@ class TaskRepository:
     @staticmethod
     async def get_by_id(task_id: int, session: AsyncSession) -> Task | None:
         stmt = select(Task).where(Task.id == task_id).options(
-            selectinload(Task.owner), 
+            selectinload(Task.owner).selectinload(User.skills),
+            selectinload(Task.owner).selectinload(User.achievements),
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
@@ -170,7 +174,10 @@ class ApplicationRepository:
 
     @staticmethod
     async def get_by_id(app_id: int, session: AsyncSession) -> TaskApplication | None:
-        stmt = select(TaskApplication).where(TaskApplication.id == app_id)
+        stmt = select(TaskApplication).where(TaskApplication.id == app_id).options(
+            selectinload(TaskApplication.student),
+            selectinload(TaskApplication.task)
+        )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -185,7 +192,11 @@ class ApplicationRepository:
         stmt = select(TaskApplication).join(Task).where(
             Task.owner_id == owner_id,
             TaskApplication.status == ApplicationStatus.PENDING
-        ).options(selectinload(TaskApplication.student), selectinload(TaskApplication.task))
+        ).options(
+            selectinload(TaskApplication.student).selectinload(User.skills),
+            selectinload(TaskApplication.student).selectinload(User.achievements),
+            selectinload(TaskApplication.task)
+        )
         result = await session.execute(stmt)
         return result.scalars().all()
 
@@ -195,7 +206,8 @@ class ApplicationRepository:
         if app:
             app.status = status
             await session.commit()
-            await session.refresh(app)
+            # Re-fetch with fresh relationships after commit
+            return await ApplicationRepository.get_by_id(app_id, session)
         return app
 
     @staticmethod

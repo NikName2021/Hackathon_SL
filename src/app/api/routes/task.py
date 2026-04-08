@@ -154,6 +154,15 @@ async def approve_application(
     return await TaskService.approve_student(app_id, current_user.id, db)
 
 
+@router.post("/applications/{app_id}/reject", response_model=ApplicationResponse)
+async def reject_application(
+    app_id: int,
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    db: AsyncSession = Depends(async_get_db)
+):
+    return await TaskService.reject_student(app_id, current_user.id, db)
+
+
 @router.post("/{task_id}/complete", response_model=TaskResponse)
 async def complete_task(
     task_id: int,

@@ -3,8 +3,9 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
 import { User, Task } from '@/types';
-import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle } from 'lucide-react';
+import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { UserProfileModal } from '@/components/UserProfileModal';
 
 interface Application {
   id: number;
@@ -20,6 +21,8 @@ export const ApplicationsPanel: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<number | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<User | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const fetchApplications = async () => {
     try {
@@ -46,6 +49,23 @@ export const ApplicationsPanel: React.FC = () => {
     } finally {
       setIsProcessing(null);
     }
+  };
+
+  const handleReject = async (appId: number) => {
+    setIsProcessing(appId);
+    try {
+      await apiClient.post(`/tasks/applications/${appId}/reject`);
+      setApplications(prev => prev.filter(app => app.id !== appId));
+    } catch (error) {
+      console.error('Failed to reject application:', error);
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleOpenProfile = (student: User) => {
+    setSelectedStudent(student);
+    setIsProfileOpen(true);
   };
 
   if (isLoading) {
@@ -97,10 +117,21 @@ export const ApplicationsPanel: React.FC = () => {
                               {app.student.full_name?.charAt(0) || 'С'}
                             </span>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-surface-900 dark:text-white">
-                              {app.student.full_name}
-                            </h3>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-lg font-bold text-surface-900 dark:text-white">
+                                {app.student.full_name}
+                              </h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenProfile(app.student)}
+                                className="text-primary-600 hover:text-primary-700 font-bold gap-1"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Профиль
+                              </Button>
+                            </div>
                             <div className="flex items-center gap-3 text-sm text-surface-500 mt-1">
                               <span className="flex items-center gap-1 font-medium text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded">
                                 <CheckCircle className="w-3 h-3" />
@@ -143,6 +174,8 @@ export const ApplicationsPanel: React.FC = () => {
                         </Button>
                         <Button
                           variant="outline"
+                          onClick={() => handleReject(app.id)}
+                          isLoading={isProcessing === app.id}
                           leftIcon={<UserX className="w-4 h-4" />}
                           className="flex-1 md:w-full text-red-500 border-red-200 hover:bg-red-50"
                         >
@@ -157,6 +190,12 @@ export const ApplicationsPanel: React.FC = () => {
           </AnimatePresence>
         </div>
       )}
+
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        student={selectedStudent}
+      />
     </div>
   );
 };

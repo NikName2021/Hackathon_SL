@@ -1,4 +1,7 @@
-from fastapi import HTTPException
+import os
+import uuid
+import shutil
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.chat import ChatRepository
 from repositories.task import TaskRepository
@@ -22,6 +25,46 @@ class ChatService:
             raise HTTPException(status_code=403, detail="У вас нет доступа к чату этой задачи")
 
         return await ChatRepository.create(task_id, sender_id, content, session)
+
+    @staticmethod
+    async def send_file_message(task_id: int, sender_id: int, file: UploadFile, content: str, role: Role, session: AsyncSession):
+        task = await TaskRepository.get_by_id(task_id, session)
+        if not task:
+            raise HTTPException(status_code=404, detail="Задача не найдена")
+
+        # Security check
+        is_owner = task.owner_id == sender_id
+        is_assigned = any(
+            app.student_id == sender_id and app.status == ApplicationStatus.ACCEPTED 
+            for app in task.applications
+        )
+
+        if not (is_owner or is_assigned):
+            raise HTTPException(status_code=403, detail="У вас нет доступа к чату этой задачи")
+
+        # Handle file upload
+        upload_dir = "uploads/chat_attachments"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_ext = file.filename.split(".")[-1]
+        unique_filename = f"{task_id}_{uuid.uuid4().hex}.{file_ext}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        file_url = f"/uploads/chat_attachments/{unique_filename}"
+        file_type = "image" if file.content_type.startswith("image/") else "file"
+        
+        return await ChatRepository.create(
+            task_id=task_id, 
+            sender_id=sender_id, 
+            content=content or f"Файл: {file.filename}", 
+            session=session,
+            file_url=file_url,
+            file_name=file.filename,
+            file_type=file_type
+        )
 
     @staticmethod
     async def get_messages(task_id: int, user_id: int, session: AsyncSession):

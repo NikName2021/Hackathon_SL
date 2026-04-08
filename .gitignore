@@ -31,3 +31,4 @@ __pycache__/
 .pytest_cache/
 src/pytest-cache-files-*/
 logs/
+/src/app/uploads/

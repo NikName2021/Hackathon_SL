@@ -2,11 +2,30 @@ import datetime
 from enum import Enum
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, Float, Enum as SQLAlchemyEnum, text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, Float, Enum as SQLAlchemyEnum, Table, text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.orm import declarative_base, relationship
 
 DeclBase = declarative_base()
+
+
+# Association table for User and Skill (Many-to-Many)
+user_skills = Table(
+    "user_skills",
+    DeclBase.metadata,
+    Column("user_id", Integer, ForeignKey("user.id"), primary_key=True),
+    Column("skill_id", Integer, ForeignKey("skill.id"), primary_key=True),
+)
+
+
+# Association table for User and Achievement (Many-to-Many)
+user_achievements = Table(
+    "user_achievements",
+    DeclBase.metadata,
+    Column("user_id", Integer, ForeignKey("user.id"), primary_key=True),
+    Column("achievement_id", Integer, ForeignKey("achievement.id"), primary_key=True),
+    Column("earned_at", DateTime, default=datetime.datetime.now),
+)
 
 
 class Role(str, Enum):
@@ -41,6 +60,11 @@ class User(DeclBase):
     reputation = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
     
+    # Profile fields
+    bio = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    resume_path = Column(String, nullable=True)
+    
     # Optional TG fields (keeping them for possible future integration)
     telegram_id = Column(BigInteger, nullable=True)
     chat_id = Column(BigInteger, nullable=True)
@@ -52,6 +76,30 @@ class User(DeclBase):
     created_tasks = relationship("Task", back_populates="owner", foreign_keys="Task.owner_id")
     applications = relationship("TaskApplication", back_populates="student")
     submissions = relationship("TaskSubmission", back_populates="student")
+    
+    # Skills relationship
+    skills = relationship("Skill", secondary=user_skills, back_populates="users", lazy="selectin")
+    
+    # Achievements relationship
+    achievements = relationship("Achievement", secondary=user_achievements, back_populates="users", lazy="selectin")
+
+
+class Skill(DeclBase):
+    __tablename__ = "skill"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    
+    users = relationship("User", secondary=user_skills, back_populates="skills")
+
+
+class Achievement(DeclBase):
+    __tablename__ = "achievement"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(String)
+    icon_type = Column(String, default="award")  # e.g., 'award', 'star', 'target', 'zap'
+    
+    users = relationship("User", secondary=user_achievements, back_populates="achievements")
 
 
 class Category(DeclBase):

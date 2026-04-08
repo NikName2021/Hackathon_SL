@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_swagger_ui_oauth2_redirect_html
@@ -33,6 +34,13 @@ def get_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Ensure uploads directory exists
+    os.makedirs("uploads/avatars", exist_ok=True)
+    os.makedirs("uploads/resumes", exist_ok=True)
+    
+    # Mount static files
+    application.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
     if MEMOIZATION_FLAG:
         application.add_event_handler("startup", create_start_app_handler(application))

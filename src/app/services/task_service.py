@@ -10,6 +10,7 @@ from repositories.task import (
     TransactionRepository,
 )
 from repositories.user import UserRepository
+from services.gamification_service import GamificationService
 from schemas.task import (
     ApplicationCreate,
     SubmissionCreate,
@@ -189,6 +190,9 @@ class TaskService:
             if user:
                 user.reputation += 1.0
                 await session.commit()
+                
+            # Check for achievements
+            await GamificationService.check_achievements(submission.student_id, session)
         else:
             await SubmissionRepository.update_review(submission.id, "rejected", review_data.feedback, session)
             await TaskRepository.update_status(task_id, TaskStatus.IN_PROGRESS, session)

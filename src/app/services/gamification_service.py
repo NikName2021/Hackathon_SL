@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from database.all_models import User, Achievement, user_achievements, Role
+from database.all_models import User, Achievement, user_achievements, Role, TaskApplication
+from sqlalchemy.orm import selectinload
 from typing import List, Optional
 import math
 
@@ -35,6 +36,7 @@ class GamificationService:
         stmt = (
             select(User)
             .where(User.role == Role.STUDENT)
+            .options(selectinload(User.skills))
             .order_by(User.reputation.desc(), User.points.desc())
             .limit(limit)
         )
@@ -66,7 +68,11 @@ class GamificationService:
             return False
             
         # Check if already has it
-        user_stmt = select(User).where(User.id == user_id)
+        user_stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(selectinload(User.achievements))
+        )
         user_result = await session.execute(user_stmt)
         user = user_result.scalar_one_or_none()
         
@@ -80,7 +86,15 @@ class GamificationService:
     @staticmethod
     async def check_achievements(user_id: int, session: AsyncSession):
         """Check all possible achievements for a user."""
-        user_stmt = select(User).where(User.id == user_id)
+        user_stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(
+                selectinload(User.skills),
+                selectinload(User.achievements),
+                selectinload(User.applications).selectinload(TaskApplication.task)
+            )
+        )
         user_result = await session.execute(user_stmt)
         user = user_result.scalar_one_or_none()
         

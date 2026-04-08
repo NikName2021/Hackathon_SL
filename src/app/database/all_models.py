@@ -18,6 +18,15 @@ user_skills = Table(
 )
 
 
+# Association table for Task and Skill (Many-to-Many)
+task_skills = Table(
+    "task_skills",
+    DeclBase.metadata,
+    Column("task_id", Integer, ForeignKey("task.id"), primary_key=True),
+    Column("skill_id", Integer, ForeignKey("skill.id"), primary_key=True),
+)
+
+
 # Association table for User and Achievement (Many-to-Many)
 user_achievements = Table(
     "user_achievements",
@@ -90,6 +99,7 @@ class Skill(DeclBase):
     name = Column(String, unique=True, index=True, nullable=False)
     
     users = relationship("User", secondary=user_skills, back_populates="skills")
+    tasks = relationship("Task", secondary=task_skills, back_populates="skills")
 
 
 class Achievement(DeclBase):
@@ -126,6 +136,12 @@ class Task(DeclBase):
     category = relationship("Category", back_populates="tasks")
     applications = relationship("TaskApplication", back_populates="task")
     submissions = relationship("TaskSubmission", back_populates="task")
+    
+    # Skills relationship
+    skills = relationship("Skill", secondary=task_skills, back_populates="tasks", lazy="selectin")
+    
+    # Attachments relationship
+    attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
 
     @property
     def latest_submission(self):
@@ -197,6 +213,18 @@ class ChatMessage(DeclBase):
 
     task = relationship("Task")
     sender = relationship("User")
+
+
+class TaskAttachment(DeclBase):
+    __tablename__ = "task_attachment"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("task.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    file_type = Column(String)  # 'image' or 'document'
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    task = relationship("Task", back_populates="attachments")
 
 
 async def create_tables(engine: AsyncEngine):

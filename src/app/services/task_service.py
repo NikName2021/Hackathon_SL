@@ -1,7 +1,10 @@
+import os
+import uuid
+import shutil
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from database.all_models import TaskStatus, ApplicationStatus, User, Role
-from repositories.task import TaskRepository, TaskCreateDTO, ApplicationRepository, SubmissionRepository, TransactionRepository
+from repositories.task import TaskRepository, TaskCreateDTO, ApplicationRepository, SubmissionRepository, TransactionRepository, AttachmentRepository
 from repositories.user import UserRepository
 from services.gamification_service import GamificationService
 from schemas.task import TaskCreate, ApplicationCreate, SubmissionCreate, TaskReview, TaskUpdate
@@ -11,10 +14,10 @@ class TaskService:
     @staticmethod
     async def create_task(task_data: TaskCreate, owner_id: int, session: AsyncSession):
         dto = TaskCreateDTO(
-            **task_data.model_dump(),
+            **task_data.model_dump(exclude={"skills"}),
             owner_id=owner_id
         )
-        task = await TaskRepository.create(dto, session)
+        task = await TaskRepository.create(dto, session, skill_names=task_data.skills)
         # Initial status for moderation
         await TaskRepository.update_status(task.id, TaskStatus.PENDING_APPROVAL, session)
         return task
@@ -27,7 +30,12 @@ class TaskService:
         if task.owner_id != owner_id:
             raise HTTPException(status_code=403, detail="Вы не являетесь владельцем задачи")
         
-        updated_task = await TaskRepository.update(task_id, update_data.model_dump(exclude_unset=True), session)
+        updated_task = await TaskRepository.update(
+            task_id, 
+            update_data.model_dump(exclude_unset=True, exclude={"skills"}), 
+            session,
+            skill_names=update_data.skills
+        )
         return updated_task
 
     @staticmethod
@@ -159,3 +167,39 @@ class TaskService:
         await ApplicationRepository.reject_all_by_student(user_id, session)
         
         return user
+
+    @staticmethod
+    async def upload_attachments(task_id: int, files: list, session: AsyncSession):
+        upload_dir = "uploads/task_attachments"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        attachments = []
+        for file in files:
+            file_ext = file.filename.split(".")[-1]
+            file_name = f"{task_id}_{uuid.uuid4().hex}.{file_ext}"
+            file_path = os.path.join(upload_dir, file_name)
+            
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            url = f"/uploads/task_attachments/{file_name}"
+            # Simple check for file type
+            file_type = "image" if file.content_type.startswith("image/") else "document"
+            
+            attachment = await AttachmentRepository.create(task_id, file.filename, url, file_type, session)
+            attachments.append(attachment)
+            
+        return attachments
+
+    @staticmethod
+    async def delete_attachment(attachment_id: int, session: AsyncSession):
+        attachment = await AttachmentRepository.get_by_id(attachment_id, session)
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Вложение не найдено")
+        
+        # Remove file from disk
+        file_path = attachment.url.lstrip("/")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        return await AttachmentRepository.delete(attachment_id, session)

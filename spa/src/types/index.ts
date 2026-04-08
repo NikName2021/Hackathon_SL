@@ -57,6 +57,13 @@ export interface TaskApplication {
   applied_at: string;
 }
 
+export interface TaskAttachment {
+  id: number;
+  filename: string;
+  url: string;
+  file_type?: 'image' | 'document';
+}
+
 export interface Task {
   id: number;
   title: string;
@@ -69,6 +76,8 @@ export interface Task {
   created_at: string;
   deadline?: string;
   latest_submission?: Submission;
+  skills: Skill[];
+  attachments: TaskAttachment[];
 }
 
 export interface Submission {
@@ -114,4 +123,16 @@ export interface DashboardStats {
   total_points: number;
   pending_applications: number;
   pending_moderation: number;
+}
+
+export interface RecommendedTask {
+  id: number;
+  title: string;
+  description?: string;
+  points_reward: number;
+  category: string;
+  owner_name: string;
+  match_score: number;
+  skills: string[];
+  attachments: TaskAttachment[];
 }

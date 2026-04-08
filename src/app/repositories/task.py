@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus, TaskSubmission, PointTransaction
+from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus, TaskSubmission, PointTransaction, Skill, TaskAttachment
 
 
 class TaskCreateDTO(BaseModel):
@@ -23,7 +23,9 @@ class TaskRepository:
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
-            selectinload(Task.submissions)
+            selectinload(Task.submissions),
+            selectinload(Task.skills),
+            selectinload(Task.attachments)
         )
         if status:
             stmt = stmt.where(Task.status == status)
@@ -45,7 +47,9 @@ class TaskRepository:
             selectinload(Task.category), 
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
-            selectinload(Task.submissions)
+            selectinload(Task.submissions),
+            selectinload(Task.skills),
+            selectinload(Task.attachments)
         )
         result = await session.execute(stmt)
         return result.scalars().all()
@@ -59,7 +63,9 @@ class TaskRepository:
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
-            selectinload(Task.submissions)
+            selectinload(Task.submissions),
+            selectinload(Task.skills),
+            selectinload(Task.attachments)
         )
         result = await session.execute(stmt)
         return result.scalars().all()
@@ -71,25 +77,58 @@ class TaskRepository:
             selectinload(Task.category),
             selectinload(Task.applications).selectinload(TaskApplication.student),
             selectinload(Task.applications).selectinload(TaskApplication.task),
-            selectinload(Task.submissions)
+            selectinload(Task.submissions),
+            selectinload(Task.skills),
+            selectinload(Task.attachments)
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def create(task_data: TaskCreateDTO, session: AsyncSession) -> Task:
-        task = Task(**task_data.model_dump())
+    async def create(task_data: TaskCreateDTO, session: AsyncSession, skill_names: list[str] = None) -> Task:
+        data = task_data.model_dump()
+        task = Task(**data)
+        task.skills = [] # Initialize collection to avoid lazy loading triggers
+        
+        if skill_names:
+            from database.all_models import Skill
+            for name in skill_names:
+                skill_stmt = select(Skill).where(Skill.name == name)
+                skill_res = await session.execute(skill_stmt)
+                skill = skill_res.scalar_one_or_none()
+                if not skill:
+                    skill = Skill(name=name)
+                    session.add(skill)
+                task.skills.append(skill)
+                
         session.add(task)
         await session.commit()
         return await TaskRepository.get_by_id(task.id, session)
 
     @staticmethod
-    async def update(task_id: int, update_data: dict, session: AsyncSession) -> Task | None:
+    async def update(task_id: int, update_data: dict, session: AsyncSession, skill_names: list[str] = None) -> Task | None:
         task = await TaskRepository.get_by_id(task_id, session)
         if task:
             for key, value in update_data.items():
                 if value is not None:
                     setattr(task, key, value)
+            
+            if skill_names is not None:
+                from database.all_models import Skill
+                # Ensure task is in session (though get_by_id should have handled it)
+                if task not in session:
+                    session.add(task)
+                    
+                task.skills = []
+                for name in skill_names:
+                    skill_stmt = select(Skill).where(Skill.name == name)
+                    skill_res = await session.execute(skill_stmt)
+                    skill = skill_res.scalar_one_or_none()
+                    if not skill:
+                        skill = Skill(name=name)
+                        session.add(skill)
+                    task.skills.append(skill)
+                    
             await session.commit()
             return await TaskRepository.get_by_id(task_id, session)
         return task
@@ -211,3 +250,36 @@ class TransactionRepository:
         stmt = select(PointTransaction).where(PointTransaction.user_id == user_id).order_by(PointTransaction.created_at.desc())
         result = await session.execute(stmt)
         return result.scalars().all()
+
+
+class SkillRepository:
+    @staticmethod
+    async def get_all(session: AsyncSession):
+        stmt = select(Skill).order_by(Skill.name)
+        result = await session.execute(stmt)
+        return result.scalars().all()
+
+
+class AttachmentRepository:
+    @staticmethod
+    async def create(task_id: int, filename: str, url: str, file_type: str, session: AsyncSession):
+        attachment = TaskAttachment(task_id=task_id, filename=filename, url=url, file_type=file_type)
+        session.add(attachment)
+        await session.commit()
+        await session.refresh(attachment)
+        return attachment
+
+    @staticmethod
+    async def get_by_id(attachment_id: int, session: AsyncSession) -> TaskAttachment | None:
+        stmt = select(TaskAttachment).where(TaskAttachment.id == attachment_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def delete(attachment_id: int, session: AsyncSession):
+        attachment = await AttachmentRepository.get_by_id(attachment_id, session)
+        if attachment:
+            await session.delete(attachment)
+            await session.commit()
+            return True
+        return False

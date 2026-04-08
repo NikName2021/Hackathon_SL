@@ -3,8 +3,23 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
 import { Task } from '@/types';
-import { Clock, CheckCircle2, ChevronRight, FileText, LayoutList, Users, ShieldAlert, Edit, ArrowRight, MessageSquare } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+  Clock, 
+  CheckCircle2, 
+  ChevronRight, 
+  ChevronDown,
+  FileText, 
+  LayoutList, 
+  Users, 
+  ShieldAlert, 
+  Edit, 
+  ArrowRight, 
+  MessageSquare,
+  Paperclip,
+  Tag,
+  Download
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { SubmissionModal } from '@/components/SubmissionModal';
 import { ChatComponent } from '@/components/ChatComponent';
 import { useAuth } from '@/context/AuthContext';
@@ -13,6 +28,7 @@ import { Link } from 'react-router-dom';
 export const MyTasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -42,6 +58,10 @@ export const MyTasks: React.FC = () => {
   const openChat = (task: Task) => {
     setChatTask(task);
     setIsChatOpen(true);
+  };
+
+  const toggleExpand = (taskId: number) => {
+    setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
   };
 
   if (isLoading) {
@@ -87,6 +107,8 @@ export const MyTasks: React.FC = () => {
         return <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 text-[10px] font-bold uppercase tracking-wider">Проверка</span>;
       case 'completed':
         return <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-600 dark:bg-purple-900/20 text-[10px] font-bold uppercase tracking-wider">Завершено</span>;
+      case 'cancelled':
+        return <span className="px-2 py-0.5 rounded bg-red-100 text-red-600 dark:bg-red-900/20 text-[10px] font-bold uppercase tracking-wider">Отклонено</span>;
       default:
         return null;
     }
@@ -142,6 +164,8 @@ export const MyTasks: React.FC = () => {
                     <div className="w-12 h-12 rounded-xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                       {task.status === 'completed' 
                         ? <CheckCircle2 className="w-6 h-6 text-green-500" />
+                        : task.status === 'cancelled'
+                        ? <ShieldAlert className="w-6 h-6 text-red-500" />
                         : <Clock className="w-6 h-6 text-primary-600" />
                       }
                     </div>
@@ -276,25 +300,91 @@ export const MyTasks: React.FC = () => {
                             )}
                           </div>
                         )}
-                        {task.status === 'pending_approval' && (
+                        {(task.status === 'pending_approval' || task.status === 'cancelled') && (
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1 text-orange-500 text-xs font-bold bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-xl border border-orange-200/50">
-                              <ShieldAlert className="w-4 h-4" /> Модерация
-                            </div>
                             <Link to={`/tasks/edit/${task.id}`}>
-                              <Button size="sm" variant="ghost" className="text-surface-500 hover:text-primary-600" leftIcon={<Edit className="w-4 h-4" />}>
-                                Изменить
+                              <Button size="sm" variant="ghost" className="text-surface-600 dark:text-surface-400 hover:text-primary-600" leftIcon={<Edit className="w-4 h-4" />}>
+                                {task.status === 'cancelled' ? 'Исправить' : 'Изменить'}
                               </Button>
                             </Link>
                           </div>
                         )}
-                        <Button variant="ghost" size="sm" className="hidden md:flex text-surface-300">
-                          <ChevronRight className="w-5 h-5" />
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="hidden md:flex text-surface-400 dark:text-surface-500 hover:bg-surface-100 dark:hover:bg-white/5"
+                          onClick={() => toggleExpand(task.id)}
+                        >
+                          {expandedTaskId === task.id ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                         </Button>
                       </div>
                     )}
                   </div>
                 </div>
+
+                <AnimatePresence>
+                  {expandedTaskId === task.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-6 mt-6 border-t border-surface-100 dark:border-white/5 space-y-6">
+                        {/* Description Section */}
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-surface-400 mb-2">Описание задачи</h4>
+                          <p className="text-sm text-surface-600 dark:text-surface-300 leading-relaxed">
+                            {task.description}
+                          </p>
+                        </div>
+
+                        {/* Skills Section */}
+                        {task.skills && task.skills.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-surface-400 mb-2">Требуемые навыки</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {task.skills.map((skill) => (
+                                <span key={skill.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-50 dark:bg-white/5 rounded-lg border border-surface-100 dark:border-white/10 text-xs font-medium text-surface-600 dark:text-surface-400">
+                                  <Tag className="w-3 h-3" />
+                                  {skill.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Attachments Section */}
+                        {task.attachments && task.attachments.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-surface-400 mb-2">Вложения</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {task.attachments.map((file) => (
+                                <a 
+                                  key={file.id} 
+                                  href={file.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-surface-200 dark:border-white/10 rounded-xl hover:border-primary-500/50 transition-colors group"
+                                >
+                                  <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <Paperclip className="w-5 h-5 text-primary-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-bold text-surface-900 dark:text-white truncate">{file.filename}</div>
+                                    <div className="text-[10px] text-surface-400 uppercase tracking-tighter">{file.file_type}</div>
+                                  </div>
+                                  <Download className="w-4 h-4 text-surface-300 group-hover:text-primary-500 transition-colors" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </Card>
             </motion.div>
           ))}

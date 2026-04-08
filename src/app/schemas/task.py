@@ -10,6 +10,14 @@ class CategoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TaskAttachmentResponse(BaseModel):
+    id: int
+    filename: str
+    url: str
+    file_type: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class CategoryCreate(BaseModel):
     name: str
 
@@ -62,6 +70,7 @@ class TaskCreate(BaseModel):
     category_id: int | None = None
     points_reward: int = 0
     deadline: datetime | None = None
+    skills: List[str] = []
 
 
 class TaskUpdate(BaseModel):
@@ -70,6 +79,7 @@ class TaskUpdate(BaseModel):
     category_id: Optional[int] = None
     points_reward: Optional[int] = None
     deadline: Optional[datetime] = None
+    skills: Optional[List[str]] = None
 
 
 class TaskShortResponse(BaseModel):
@@ -117,7 +127,20 @@ class TaskResponse(BaseModel):
     category: CategoryResponse | None = None
     applications: List[ApplicationResponse] = []
     latest_submission: Optional[SubmissionResponse] = None
+    skills: List[SkillResponse] = []
+    attachments: List[TaskAttachmentResponse] = []
     model_config = ConfigDict(from_attributes=True)
+
+
+class RecommendedTaskResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None
+    points_reward: int
+    category: str
+    owner_name: str
+    match_score: int
+    skills: List[str] = []
 
 
 class DashboardStats(BaseModel):

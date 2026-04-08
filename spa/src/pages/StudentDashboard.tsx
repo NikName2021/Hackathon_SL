@@ -6,6 +6,7 @@ import { apiClient } from '@/api/client';
 import { DashboardStats, Task } from '@/types';
 import { Trophy, Clock, CheckCircle2, ArrowRight, Zap, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { RecommendationSection } from '@/components/RecommendationSection';
 
 export const StudentDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -124,28 +125,13 @@ export const StudentDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions / Tips */}
+        {/* Recommendations Section */}
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-yellow-500" />
-            Полезные советы
-          </h2>
-          <Card className="p-6 bg-surface-900 text-white dark:bg-primary-900/20 dark:text-primary-100 border-none">
-            <ul className="space-y-4 text-sm">
-              <li className="flex gap-3">
-                <span className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
-                <span>Заполняй профиль полностью, чтобы сотрудники видели твои навыки и охотнее принимали отклики.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
-                <span>Следи за дедлайнами — своевременное выполнение повышает твой рейтинг репутации.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
-                <span>Накопленные KP можно потратить в "Магазине бонусов" (скоро в приложении).</span>
-              </li>
-            </ul>
-          </Card>
+          <RecommendationSection />
+          
+          <div className="mt-10 pt-10 border-t border-gray-100 italic text-gray-400 text-sm">
+             <p>Подсказка: Чем больше навыков указано в вашем профиле, тем точнее система подбирает задачи.</p>
+          </div>
         </div>
       </div>
     </div>

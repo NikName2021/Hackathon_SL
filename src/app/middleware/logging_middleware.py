@@ -52,7 +52,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 }
             )
 
-            if response:
-                response.headers["X-Request-ID"] = request_id
+        if response:
+            response.headers["X-Request-ID"] = request_id
 
-            return response
+        return response

@@ -34,32 +34,36 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+import { NotificationProvider } from '@/context/NotificationContext';
+
 function App() {
   const { user } = useAuth();
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
-      
-      <Route path="/" element={
-        <PrivateRoute>
-          <MainLayout />
-        </PrivateRoute>
-      }>
-        <Route index element={<DashboardHub />} />
-        <Route path="tasks" element={<TaskCatalog />} />
-        <Route path="tasks/my" element={<MyTasks />} />
-        <Route path="tasks/new" element={<CreateTask />} />
-        <Route path="tasks/edit/:id" element={<EditTask />} />
-        <Route path="reviews" element={<EmployeeReviews />} />
-        <Route path="applications" element={<ApplicationsPanel />} />
-        <Route path="admin" element={<AdminPanel />} />
-        <Route path="moderation" element={<ModerationPanel />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
-      </Route>
-    </Routes>
+    <NotificationProvider>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+        <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+        
+        <Route path="/" element={
+          <PrivateRoute>
+            <MainLayout />
+          </PrivateRoute>
+        }>
+          <Route index element={<DashboardHub />} />
+          <Route path="tasks" element={<TaskCatalog />} />
+          <Route path="tasks/my" element={<MyTasks />} />
+          <Route path="tasks/new" element={<CreateTask />} />
+          <Route path="tasks/edit/:id" element={<EditTask />} />
+          <Route path="reviews" element={<EmployeeReviews />} />
+          <Route path="applications" element={<ApplicationsPanel />} />
+          <Route path="admin" element={<AdminPanel />} />
+          <Route path="moderation" element={<ModerationPanel />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="leaderboard" element={<Leaderboard />} />
+        </Route>
+      </Routes>
+    </NotificationProvider>
   );
 }
 

@@ -28,7 +28,7 @@ export const MainLayout: React.FC = () => {
   const navItems = [
     { name: 'Дашборд', path: '/', icon: LayoutDashboard, roles: ['student', 'employee', 'admin'] },
     { name: 'Каталог задач', path: '/tasks', icon: Briefcase, roles: ['student'] },
-    { name: 'Мои задачи', path: '/tasks/my', icon: ListChecks, roles: ['student'] },
+    { name: 'Мои задачи', path: '/tasks/my', icon: ListChecks, roles: ['student', 'employee', 'admin'] },
     { name: 'Рейтинг', path: '/leaderboard', icon: Trophy, roles: ['student'] },
     { name: 'Создать задачу', path: '/tasks/new', icon: Plus, roles: ['employee', 'admin'] },
     { name: 'Отклики', path: '/applications', icon: Users, roles: ['employee'] },

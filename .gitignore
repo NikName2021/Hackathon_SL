@@ -32,3 +32,4 @@ src/pytest-cache-files-*/
 src/tmp/
 logs/
 /src/app/uploads/
+.env.example

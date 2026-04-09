@@ -2,65 +2,89 @@
 
 Внутривузовская платформа для распределения задач между сотрудниками и студентами.
 
-## Что уже работает
+## Быстрый старт (Docker)
 
-- Регистрация и авторизация по ролям.
-- Жизненный цикл задачи: создание, модерация, отклик, назначение исполнителя, сдача, проверка, начисление баллов.
-- Swagger/OpenAPI.
-- Публичная лента задач и личные кабинеты.
-- Автосоздание стартовых категорий на запуске backend.
-
-## Быстрый запуск
-
-1. Запусти стек:
+1. Создай `.env` в корне проекта:
 
 ```powershell
-docker compose --env-file src/app/.env up --build
+Copy-Item .env.example .env
 ```
 
-2. Открой приложение:
+2. Подними проект:
 
+```powershell
+docker compose up -d --build
+```
+
+3. Открой сервисы:
 - SPA: `http://localhost`
-- Backend API: `http://localhost:8000`
-- Swagger: `http://localhost/docs`
+- Backend API: `http://localhost:8000/api/v1`
+- Swagger: `http://localhost:8000/docs`
 
-## Локальный запуск без Docker
+## Локальный запуск (без Docker)
 
-Backend:
+### 1) Backend
 
 ```powershell
-cd src/app
-python main.py
+cd src
+python -m venv .venv
+python -m pip --python .venv/Scripts/python.exe install -r requirements.txt
 ```
 
-Frontend:
+Создай `src/app/.env` (можно взять значения из `.env.example`) и обязательно укажи:
+- `POSTGRES_HOST=localhost`
+- `POSTGRES_PORT=5450`
+- `POSTGRES_USER=...`
+- `POSTGRES_PASSWORD=...`
+- `POSTGRES_DATABASE=...`
+- `SECRET_KEY=...`
+
+Запуск backend:
+
+```powershell
+cd app
+..\.venv\Scripts\python.exe main.py
+```
+
+### 2) Frontend
 
 ```powershell
 cd spa
+npm install
 npm run dev
 ```
 
-## Админ
+По умолчанию Vite проксирует `/api` на `http://localhost:8000`.
 
-После регистрации обычного аккаунта переведи его в администратора:
+## Администратор
+
+1. Зарегистрируй пользователя через UI.
+2. Назначь ему роль админа:
 
 ```powershell
 cd src
 python make_admin.py user@example.com
 ```
 
-## Seed
+## Demo seed
 
-- Стартовые категории создаются автоматически при запуске backend.
-- Если база уже была заполнена, seed повторно ничего не изменит.
+При запуске backend автоматически создаются:
+- категории задач;
+- demo-пользователи и demo-задачи (если `DEMO_SEED=true`).
 
-## Проверка
+Демо-аккаунты:
+- `admin@demo.local`
+- `employee@demo.local`
+- `student@demo.local`
 
-Рекомендуем перед демо проверить:
+Пароль по умолчанию: `demo12345`
+
+## Проверка перед демо
 
 ```powershell
 cd src
-python -m pytest
+.venv\Scripts\python.exe -m pytest tests/api/test_auth_routes.py -q
+.venv\Scripts\python.exe -m pytest tests/api/test_admin_routes.py -q
 cd ..\spa
 npm run build
 ```

@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from api.routes.api import router as api_router
 from core.config import API_PREFIX, DEBUG, HOST, MEMOIZATION_FLAG, PORT, PROJECT_NAME, VERSION, sessionmaker
 from core.events import create_start_app_handler
-from helpers.seed_data import seed_categories
+from helpers.seed_data import seed_categories, seed_demo_data
 from middleware import LoggingMiddleware
 
 
@@ -46,6 +46,7 @@ def get_application() -> FastAPI:
     async def startup_seed():
         async with sessionmaker() as session:
             await seed_categories(session)
+            await seed_demo_data(session)
 
     return application
 

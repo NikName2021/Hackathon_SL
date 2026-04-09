@@ -1,3 +1,4 @@
+import math
 import os
 import shutil
 import uuid
@@ -16,7 +17,9 @@ from repositories.task import (
     TransactionRepository,
 )
 from repositories.user import UserRepository
+from repositories.team import TeamRepository
 from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, TaskReview, TaskUpdate
+from schemas.team import TeamCreate
 from services.gamification_service import GamificationService
 
 
@@ -144,7 +147,20 @@ class TaskService:
         if existing:
             raise HTTPException(status_code=400, detail="Already applied")
 
-        return await ApplicationRepository.create(task_id, student_id, app_data.message, session)
+        # Team validation if applicable
+        if app_data.team_id:
+            team = await TeamRepository.get_by_id(app_data.team_id, session)
+            if not team:
+                raise HTTPException(status_code=404, detail="Team not found")
+            if team.creator_id != student_id:
+                raise HTTPException(status_code=403, detail="Only team leader can apply")
+            if team.task_id != task_id:
+                raise HTTPException(status_code=400, detail="Team is for another task")
+            
+            # Update team status to applied
+            await TeamRepository.update_status(app_data.team_id, "applied", session)
+
+        return await ApplicationRepository.create(task_id, student_id, app_data.message, session, team_id=app_data.team_id)
 
     @staticmethod
     async def approve_student(app_id: int, owner_id: int, session: AsyncSession):
@@ -157,12 +173,18 @@ class TaskService:
             raise HTTPException(status_code=400, detail="Task is not open")
         if app.status != ApplicationStatus.PENDING:
             raise HTTPException(status_code=400, detail="Application is not pending")
-        if task.assignee_id is not None:
-            raise HTTPException(status_code=400, detail="Task already has assignee")
+        if task.assignee_id is not None or task.team_id is not None:
+            raise HTTPException(status_code=400, detail="Task already has assignee or team")
 
         accepted = await ApplicationRepository.update_status(app_id, ApplicationStatus.ACCEPTED, session)
         await ApplicationRepository.reject_pending_for_task_except(task.id, app_id, session)
-        await TaskRepository.assign_student(task.id, app.student_id, session)
+        
+        if app.team_id:
+            await TaskRepository.assign_team(task.id, app.team_id, session)
+            await TeamRepository.update_status(app.team_id, "active", session)
+        else:
+            await TaskRepository.assign_student(task.id, app.student_id, session)
+            
         await TaskRepository.update_status(task.id, TaskStatus.IN_PROGRESS, session)
         return accepted
 
@@ -207,12 +229,28 @@ class TaskService:
         if review_data.is_approved:
             await SubmissionRepository.update_review(submission.id, "approved", review_data.feedback, session)
             await TaskRepository.update_status(task_id, TaskStatus.COMPLETED, session)
-            await UserRepository.update_points(submission.student_id, task.points_reward, session)
-            await TransactionRepository.create(submission.student_id, task.points_reward, "earned", task.id, session)
-
-            user = await UserRepository.get_by_id(submission.student_id, session)
-            if user:
-                user.reputation += 1.0
+            
+            # Point awarding
+            reward_recipients = []
+            if task.team_id:
+                team = await TeamRepository.get_by_id(task.team_id, session)
+                if team:
+                    reward_recipients = [m.user_id for m in team.members]
+                    await TeamRepository.update_status(task.team_id, "completed", session)
+            else:
+                reward_recipients = [submission.student_id]
+                
+            if reward_recipients:
+                individual_reward = math.ceil(task.points_reward / len(reward_recipients))
+                for user_id in reward_recipients:
+                    await UserRepository.update_points(user_id, individual_reward, session)
+                    await TransactionRepository.create(user_id, individual_reward, "earned", task.id, session)
+                    
+                    user = await UserRepository.get_by_id(user_id, session)
+                    if user:
+                        user.reputation += 1.0 # In team reward, everyone gets reputation?
+                        # await session.commit() # Repository handles commit usually, but here we might need it for each user update if not in one transaction
+                
                 await session.commit()
 
             await GamificationService.check_achievements(submission.student_id, session)
@@ -275,3 +313,44 @@ class TaskService:
             os.remove(file_path)
 
         return await AttachmentRepository.delete(attachment_id, session)
+
+    @staticmethod
+    async def create_team(task_id: int, creator_id: int, team_data: TeamCreate, session: AsyncSession):
+        task = await TaskService._get_task_or_404(task_id, session)
+        if task.status != TaskStatus.OPEN:
+            raise HTTPException(status_code=400, detail="Cannot create team for non-open task")
+        
+        return await TeamRepository.create(task_id, creator_id, team_data.name, session)
+
+    @staticmethod
+    async def join_team(team_id: int, user_id: int, session: AsyncSession):
+        team = await TeamRepository.get_by_id(team_id, session)
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.status != "recruiting":
+            raise HTTPException(status_code=400, detail="Team is no longer recruiting")
+        if len(team.members) >= 4:
+            raise HTTPException(status_code=400, detail="Team is full (max 4 members)")
+        
+        existing = await TeamRepository.get_member(team_id, user_id, session)
+        if existing:
+            raise HTTPException(status_code=400, detail="Already a member")
+            
+        return await TeamRepository.add_member(team_id, user_id, session)
+
+    @staticmethod
+    async def leave_team(team_id: int, user_id: int, session: AsyncSession):
+        team = await TeamRepository.get_by_id(team_id, session)
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.creator_id == user_id:
+            raise HTTPException(status_code=400, detail="Creator cannot leave the team. Dissolve it instead (not implemented).")
+        
+        success = await TeamRepository.remove_member(team_id, user_id, session)
+        if not success:
+            raise HTTPException(status_code=400, detail="Not a member")
+        return {"status": "success"}
+
+    @staticmethod
+    async def get_task_teams(task_id: int, session: AsyncSession):
+        return await TeamRepository.get_by_task_id(task_id, session)

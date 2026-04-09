@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useNotification } from '@/context/NotificationContext';
+import { useAuth } from '@/context/AuthContext';
 import type { Category, Skill, Task } from '@/types';
 
 export const CreateTask: React.FC = () => {
@@ -27,8 +28,14 @@ export const CreateTask: React.FC = () => {
 
   const navigate = useNavigate();
   const { showNotification } = useNotification();
+  const { user } = useAuth();
 
   useEffect(() => {
+    if (user && user.role === 'admin') {
+      navigate('/');
+      return;
+    }
+    
     const fetchInitialData = async () => {
       try {
         const [categoriesResponse, skillsResponse] = await Promise.all([

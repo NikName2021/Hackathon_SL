@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus, TaskSubmission, PointTransaction, Skill, TaskAttachment, User
+from database.all_models import Task, TaskStatus, TaskApplication, ApplicationStatus, TaskSubmission, PointTransaction, Skill, TaskAttachment, User, TaskTeam, TeamMember
 
 
 class TaskCreateDTO(BaseModel):
@@ -44,7 +44,8 @@ class TaskRepository:
             selectinload(Task.applications).selectinload(TaskApplication.task),
             selectinload(Task.submissions),
             selectinload(Task.skills),
-            selectinload(Task.attachments)
+            selectinload(Task.attachments),
+            selectinload(Task.team).selectinload(TaskTeam.members).selectinload(TeamMember.user)
         )
         if status:
             stmt = stmt.where(Task.status == status)
@@ -78,7 +79,8 @@ class TaskRepository:
             selectinload(Task.applications).selectinload(TaskApplication.task),
             selectinload(Task.submissions),
             selectinload(Task.skills),
-            selectinload(Task.attachments)
+            selectinload(Task.attachments),
+            selectinload(Task.team).selectinload(TaskTeam.members).selectinload(TeamMember.user)
         )
         result = await session.execute(stmt)
         return result.scalars().all()
@@ -96,7 +98,8 @@ class TaskRepository:
             selectinload(Task.applications).selectinload(TaskApplication.task),
             selectinload(Task.submissions),
             selectinload(Task.skills),
-            selectinload(Task.attachments)
+            selectinload(Task.attachments),
+            selectinload(Task.team).selectinload(TaskTeam.members).selectinload(TeamMember.user)
         )
         result = await session.execute(stmt)
         return result.scalars().all()
@@ -112,7 +115,8 @@ class TaskRepository:
             selectinload(Task.applications).selectinload(TaskApplication.task),
             selectinload(Task.submissions),
             selectinload(Task.skills),
-            selectinload(Task.attachments)
+            selectinload(Task.attachments),
+            selectinload(Task.team).selectinload(TaskTeam.members).selectinload(TeamMember.user)
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
@@ -194,6 +198,15 @@ class TaskRepository:
         return task
 
     @staticmethod
+    async def assign_team(task_id: int, team_id: int, session: AsyncSession) -> Task | None:
+        task = await TaskRepository.get_by_id(task_id, session)
+        if task:
+            task.team_id = team_id
+            await session.commit()
+            return await TaskRepository.get_by_id(task_id, session)
+        return task
+
+    @staticmethod
     async def cancel_all_by_owner(owner_id: int, session: AsyncSession):
         stmt = select(Task).where(Task.owner_id == owner_id, Task.status != TaskStatus.COMPLETED)
         result = await session.execute(stmt)
@@ -205,8 +218,8 @@ class TaskRepository:
 
 class ApplicationRepository:
     @staticmethod
-    async def create(task_id: int, student_id: int, message: str | None, session: AsyncSession) -> TaskApplication:
-        app = TaskApplication(task_id=task_id, student_id=student_id, message=message)
+    async def create(task_id: int, student_id: int, message: str | None, session: AsyncSession, team_id: int | None = None) -> TaskApplication:
+        app = TaskApplication(task_id=task_id, student_id=student_id, message=message, team_id=team_id)
         session.add(app)
         await session.commit()
         await session.refresh(app)
@@ -214,7 +227,8 @@ class ApplicationRepository:
         # Load relationships for the response
         stmt = select(TaskApplication).where(TaskApplication.id == app.id).options(
             selectinload(TaskApplication.student),
-            selectinload(TaskApplication.task)
+            selectinload(TaskApplication.task),
+            selectinload(TaskApplication.team).selectinload(TaskTeam.members).selectinload(TeamMember.user)
         )
         result = await session.execute(stmt)
         return result.scalar_one()
@@ -223,7 +237,8 @@ class ApplicationRepository:
     async def get_by_id(app_id: int, session: AsyncSession) -> TaskApplication | None:
         stmt = select(TaskApplication).where(TaskApplication.id == app_id).options(
             selectinload(TaskApplication.student),
-            selectinload(TaskApplication.task)
+            selectinload(TaskApplication.task),
+            selectinload(TaskApplication.team).selectinload(TaskTeam.members).selectinload(TeamMember.user)
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()

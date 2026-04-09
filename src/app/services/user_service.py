@@ -4,7 +4,7 @@ import os
 import shutil
 from datetime import datetime
 from fastapi import HTTPException, status
-from core.config import SECRET_KEY, ALGORITHM
+from core.config import SECRET_KEY, ALGORITHM, DEBUG
 from database.all_models import User, Role, IssuedJWTToken
 from helpers.auth import hash_password, verify_password, create_access_token, create_refresh_token
 from schemas.input_forms import UserCreate, UserLogin
@@ -35,6 +35,14 @@ class AuthService:
             role=role_enum
         )
         user = await UserRepository.create(new_user_dto, session)
+        
+        if DEBUG:
+            from sqlalchemy import update
+            from database.all_models import User as UserTable
+            stmt = update(UserTable).where(UserTable.id == user.id).values(is_verified=True)
+            await session.execute(stmt)
+            await session.commit()
+            await session.refresh(user)
         
         # Trigger verification email
         try:

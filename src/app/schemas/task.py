@@ -2,6 +2,7 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from database.all_models import TaskStatus, ApplicationStatus, Role
+from .team import TeamResponse
 
 
 class CategoryResponse(BaseModel):
@@ -95,6 +96,7 @@ class TaskShortResponse(BaseModel):
 
 class ApplicationCreate(BaseModel):
     message: str | None = None
+    team_id: Optional[int] = None
 
 
 class ApplicationResponse(BaseModel):
@@ -106,6 +108,7 @@ class ApplicationResponse(BaseModel):
     status: ApplicationStatus
     message: str | None
     created_at: datetime
+    team: Optional[TeamResponse] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -137,6 +140,7 @@ class TaskResponse(BaseModel):
     latest_submission: Optional[SubmissionResponse] = None
     skills: List[SkillResponse] = []
     attachments: List[TaskAttachmentResponse] = []
+    team: Optional[TeamResponse] = None
     model_config = ConfigDict(from_attributes=True)
 
 

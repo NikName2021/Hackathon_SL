@@ -17,6 +17,7 @@ import { EditTask } from '@/pages/EditTask';
 import { Profile } from '@/pages/Profile';
 import Leaderboard from '@/pages/Leaderboard';
 import { FAQ } from '@/pages/FAQ';
+import { FAQAdmin } from '@/pages/FAQAdmin';
 import { VerifyEmail } from '@/pages/VerifyEmail';
 import { ForgotPassword } from '@/pages/ForgotPassword';
 import { ResetPassword } from '@/pages/ResetPassword';
@@ -75,6 +76,7 @@ function App() {
           <Route path="applications" element={<ApplicationsPanel />} />
           <Route path="admin" element={<AdminPanel />} />
           <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="admin/faq" element={<FAQAdmin />} />
           <Route path="moderation" element={<ModerationPanel />} />
           <Route path="profile" element={<Profile />} />
           <Route path="leaderboard" element={<Leaderboard />} />

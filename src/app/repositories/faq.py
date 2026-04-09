@@ -1,17 +1,20 @@
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.all_models import FAQArticle
+from database.all_models import FAQArticle, Role
 
 
 class FAQRepository:
     @staticmethod
-    async def get_all_published(session: AsyncSession):
+    async def get_all_published(session: AsyncSession, role: Role | None = None):
         stmt = (
             select(FAQArticle)
             .where(FAQArticle.is_published.is_(True))
-            .order_by(FAQArticle.created_at.desc())
         )
+        if role:
+            stmt = stmt.where(or_(FAQArticle.target_role == role, FAQArticle.target_role.is_(None)))
+        
+        stmt = stmt.order_by(FAQArticle.created_at.desc())
         result = await session.execute(stmt)
         return result.scalars().all()
 
@@ -39,6 +42,7 @@ class FAQRepository:
         slug: str,
         content: str,
         is_published: bool,
+        target_role: Role | None,
         session: AsyncSession,
     ):
         article = FAQArticle(
@@ -46,6 +50,7 @@ class FAQRepository:
             slug=slug,
             content=content,
             is_published=is_published,
+            target_role=target_role,
         )
         session.add(article)
         await session.commit()

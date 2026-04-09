@@ -149,6 +149,10 @@ class Task(DeclBase):
     # Attachments relationship
     attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
 
+    # Team relationship
+    team_id = Column(Integer, ForeignKey("task_team.id"), nullable=True)
+    team = relationship("TaskTeam", foreign_keys=[team_id])
+
     @property
     def latest_submission(self):
         if self.submissions:
@@ -168,6 +172,9 @@ class TaskApplication(DeclBase):
 
     task = relationship("Task", back_populates="applications")
     student = relationship("User", back_populates="applications")
+    
+    team_id = Column(Integer, ForeignKey("task_team.id"), nullable=True)
+    team = relationship("TaskTeam")
 
 
 class TaskSubmission(DeclBase):
@@ -236,12 +243,37 @@ class TaskAttachment(DeclBase):
     task = relationship("Task", back_populates="attachments")
 
 
+class TaskTeam(DeclBase):
+    __tablename__ = "task_team"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer, ForeignKey("task.id"), nullable=False)
+    creator_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    name = Column(String, nullable=True)
+    status = Column(String, default="recruiting")  # recruiting, applied, active, completed
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    task = relationship("Task", foreign_keys=[task_id])
+    creator = relationship("User")
+    members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
+
+
+class TeamMember(DeclBase):
+    __tablename__ = "team_member"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    team_id = Column(Integer, ForeignKey("task_team.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+
+    team = relationship("TaskTeam", back_populates="members")
+    user = relationship("User")
+
+
 class FAQArticle(DeclBase):
     __tablename__ = "faq_article"
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
     content = Column(String, nullable=False)
+    target_role = Column(SQLAlchemyEnum(Role), nullable=True)
     is_published = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)

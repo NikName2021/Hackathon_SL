@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Paperclip, Tag, User as UserIcon, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Paperclip, Tag, User as UserIcon, CalendarDays, CheckCircle2, Users, Loader2, Search } from 'lucide-react';
+
+import { useDebounce } from '@/hooks/useDebounce';
 
 import { apiClient } from '@/api/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ApplicationModal } from '@/components/ApplicationModal';
 import { UserProfileModal } from '@/components/UserProfileModal';
-import type { Category, Task, User } from '@/types';
+import { useNotification } from '@/context/NotificationContext';
+import type { Category, Task, User, TaskTeam } from '@/types';
 
 const formatDeadline = (value?: string) => {
   if (!value) {
@@ -24,7 +27,8 @@ const formatDeadline = (value?: string) => {
 export const TaskCatalog: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [searchParams] = useSearchParams();
   const highlightedTaskId = searchParams.get('taskId');
 
@@ -39,6 +43,16 @@ export const TaskCatalog: React.FC = () => {
 
   const [isOwnerModalOpen, setIsOwnerModalOpen] = useState(false);
   const [selectedOwner, setSelectedOwner] = useState<User | null>(null);
+  
+  const [taskTeams, setTaskTeams] = useState<Record<number, TaskTeam[]>>({});
+  const [isJoining, setIsJoining] = useState<number | null>(null);
+  const { showNotification } = useNotification();
+
+  // Debounced filter values
+  const debouncedMinPoints = useDebounce(minPoints, 500);
+  const debouncedMaxPoints = useDebounce(maxPoints, 500);
+  const debouncedDeadlineAfter = useDebounce(deadlineAfter, 500);
+  const debouncedDeadlineBefore = useDebounce(deadlineBefore, 500);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -54,36 +68,48 @@ export const TaskCatalog: React.FC = () => {
 
   useEffect(() => {
     const fetchTasks = async () => {
-      setIsLoading(true);
+      setIsFetching(true);
       try {
         const params: Record<string, string | number> = {};
         if (selectedCategory) {
           params.category_id = Number(selectedCategory);
         }
-        if (minPoints) {
-          params.min_points = Number(minPoints);
+        if (debouncedMinPoints) {
+          params.min_points = Number(debouncedMinPoints);
         }
-        if (maxPoints) {
-          params.max_points = Number(maxPoints);
+        if (debouncedMaxPoints) {
+          params.max_points = Number(debouncedMaxPoints);
         }
-        if (deadlineAfter) {
-          params.deadline_after = new Date(deadlineAfter).toISOString();
+        if (debouncedDeadlineAfter) {
+          params.deadline_after = new Date(debouncedDeadlineAfter).toISOString();
         }
-        if (deadlineBefore) {
-          params.deadline_before = new Date(deadlineBefore).toISOString();
+        if (debouncedDeadlineBefore) {
+          params.deadline_before = new Date(debouncedDeadlineBefore).toISOString();
         }
-
         const response = await apiClient.get<Task[]>('/tasks/', { params });
         setTasks(response.data);
+        
+        // Fetch teams for each task
+        const teamsMap: Record<number, TaskTeam[]> = {};
+        await Promise.all(response.data.map(async (task) => {
+          try {
+            const teamsRes = await apiClient.get<TaskTeam[]>(`/teams/task/${task.id}`);
+            teamsMap[task.id] = teamsRes.data.filter(t => t.status === 'recruiting');
+          } catch (e) {
+            console.error(`Failed to fetch teams for task ${task.id}`, e);
+          }
+        }));
+        setTaskTeams(teamsMap);
       } catch (error) {
         console.error('Failed to load tasks', error);
       } finally {
-        setIsLoading(false);
+        setIsFetching(false);
+        setIsInitialLoading(false);
       }
     };
 
     fetchTasks();
-  }, [selectedCategory, minPoints, maxPoints, deadlineAfter, deadlineBefore]);
+  }, [selectedCategory, debouncedMinPoints, debouncedMaxPoints, debouncedDeadlineAfter, debouncedDeadlineBefore]);
 
   const handleOpenModal = (task: Task) => {
     setSelectedTask(task);
@@ -110,10 +136,30 @@ export const TaskCatalog: React.FC = () => {
     setDeadlineBefore('');
   };
 
-  if (isLoading) {
+  const handleJoinTeam = async (teamId: number, taskId: number) => {
+    setIsJoining(teamId);
+    try {
+      await apiClient.post(`/teams/${teamId}/join`);
+      showNotification('success', 'Вы успешно присоединились к команде!');
+      
+      // Refresh teams for this task
+      const teamsRes = await apiClient.get<TaskTeam[]>(`/teams/task/${taskId}`);
+      setTaskTeams(prev => ({
+        ...prev,
+        [taskId]: teamsRes.data.filter(t => t.status === 'recruiting')
+      }));
+    } catch (error: any) {
+      showNotification('error', error.response?.data?.detail || 'Ошибка при вступлении в команду');
+    } finally {
+      setIsJoining(null);
+    }
+  };
+
+  if (isInitialLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      <div className="flex flex-col justify-center items-center h-96 space-y-4">
+        <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
+        <p className="text-surface-500 animate-pulse font-medium">Загрузка каталога задач...</p>
       </div>
     );
   }
@@ -122,8 +168,22 @@ export const TaskCatalog: React.FC = () => {
     <div className="pb-10 space-y-6">
       <h1 className="text-3xl font-bold">Доступные задачи</h1>
 
-      <Card className="space-y-4">
-        <h2 className="text-lg font-semibold">Фильтры</h2>
+      <Card className="space-y-4 relative overflow-hidden group">
+        {isFetching && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-primary-100 overflow-hidden">
+            <div className="h-full bg-primary-600 animate-progress origin-left" />
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Search className="w-5 h-5 text-primary-600" /> Фильтры
+          </h2>
+          {isFetching && (
+            <span className="text-[10px] font-bold text-primary-600 animate-pulse uppercase tracking-widest">
+              Обновление...
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <select
             value={selectedCategory}
@@ -182,13 +242,18 @@ export const TaskCatalog: React.FC = () => {
           Нет доступных задач по текущим фильтрам.
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-opacity duration-300 ${isFetching ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+          <AnimatePresence mode="popLayout">
           {tasks.map((task, index) => (
             <motion.div
               key={task.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.05 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ 
+                duration: 0.3,
+                delay: index * 0.05 
+              }}
               id={`task-${task.id}`}
             >
               <Card
@@ -245,6 +310,44 @@ export const TaskCatalog: React.FC = () => {
                     ))}
                   </div>
                 )}
+                {taskTeams[task.id] && taskTeams[task.id].length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-surface-400 flex items-center gap-1">
+                      <Users className="w-3 h-3" /> Набор в команды ({taskTeams[task.id].length})
+                    </h4>
+                    <div className="space-y-2">
+                      {taskTeams[task.id].map(team => (
+                        <div key={team.id} className="p-2 bg-surface-50 dark:bg-white/5 rounded-xl border border-surface-100 dark:border-white/5 flex items-center justify-between">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-surface-700 dark:text-surface-200">
+                              {team.name || `Команда ${team.creator.full_name.split(' ')[0]}`}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <div className="flex -space-x-1.5 overflow-hidden">
+                                {team.members.map(member => (
+                                  <div key={member.id} className="w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-900/40 border border-white dark:border-surface-800 flex items-center justify-center text-[8px] font-bold text-primary-600" title={member.user.full_name}>
+                                    {member.user.full_name.charAt(0)}
+                                  </div>
+                                ))}
+                              </div>
+                              <span className="text-[10px] text-surface-400">{team.members.length}/4 участников</span>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-7 px-3 text-[10px] rounded-lg"
+                            onClick={() => handleJoinTeam(team.id, task.id)}
+                            isLoading={isJoining === team.id}
+                            disabled={team.members.length >= 4}
+                          >
+                            Вступить
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center mt-auto pt-4 border-t border-surface-100 dark:border-white/5">
                   <div className="flex flex-col gap-1">
@@ -269,6 +372,7 @@ export const TaskCatalog: React.FC = () => {
               </Card>
             </motion.div>
           ))}
+          </AnimatePresence>
         </div>
       )}
 

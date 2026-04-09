@@ -12,27 +12,34 @@ import {
   Plus,
   Settings,
   ShieldCheck,
-  TrendingUp,
-  Users
+  Users,
+  LineChart
 } from 'lucide-react';
 import {Link} from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import type { AdminStats } from '@/types';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchAllStats = async () => {
       try {
-        const response = await apiClient.get<DashboardStats>('/tasks/stats');
-        setStats(response.data);
+        const [dashRes, adminRes] = await Promise.all([
+          apiClient.get<DashboardStats>('/tasks/stats'),
+          apiClient.get<AdminStats>('/admin/analytics')
+        ]);
+        setStats(dashRes.data);
+        setAdminStats(adminRes.data);
       } catch (error) {
         console.error('Failed to fetch admin stats:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchStats();
+    fetchAllStats();
   }, []);
 
   if (isLoading) {
@@ -60,11 +67,6 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-surface-500 mt-1">Глобальный мониторинг и управление ресурсами платформы</p>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/tasks/new">
-            <Button leftIcon={<Plus className="w-5 h-5" />} className="h-12 px-6">
-              Создать задачу
-            </Button>
-          </Link>
           <Link to="/moderation">
             <Card className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 flex items-center gap-2 cursor-pointer hover:border-red-300">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -106,9 +108,80 @@ export const AdminDashboard: React.FC = () => {
             <Activity className="w-5 h-5 text-primary-500" />
             Активность системы
           </h2>
-          <Card className="p-8 h-[300px] flex flex-col items-center justify-center border-dashed border-2 bg-surface-50/50">
-            <TrendingUp className="w-12 h-12 text-surface-300 mb-4" />
-            <p className="text-surface-500 font-medium">График активности будет доступен после накопления данных</p>
+          <Card className="p-6 h-[400px]">
+            {adminStats?.activity_log && adminStats.activity_log.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={adminStats.activity_log}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888820" />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#888888', fontSize: 10 }}
+                    tickFormatter={(str) => {
+                      const date = new Date(str);
+                      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                    }}
+                    minTickGap={30}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#888888', fontSize: 10 }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1f2937', 
+                      border: 'none', 
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: '#fff'
+                    }}
+                    itemStyle={{ color: '#fff' }}
+                    labelStyle={{ marginBottom: '8px', fontWeight: 'bold' }}
+                    labelFormatter={(label) => new Date(label).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="users"
+                    name="Регистрации"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorUsers)"
+                    animationDuration={2000}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="tasks"
+                    name="Новые задачи"
+                    stroke="#8b5cf6"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorTasks)"
+                    animationDuration={2500}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full border-dashed border-2 bg-surface-50/50 rounded-xl">
+                <LineChart className="w-12 h-12 text-surface-300 mb-4" />
+                <p className="text-surface-500 font-medium">График активности будет доступен после накопления данных</p>
+              </div>
+            )}
           </Card>
         </div>
 
@@ -118,12 +191,6 @@ export const AdminDashboard: React.FC = () => {
             Быстрое управление
           </h2>
           <div className="grid gap-4">
-            <Link to="/tasks/new" className="w-full">
-              <Button className="w-full justify-between h-14 px-6">
-                Создать задачу
-                <Plus className="w-4 h-4" />
-              </Button>
-            </Link>
             <Link to="/moderation" className="w-full">
               <Button variant="outline" className="w-full justify-between h-14 px-6 border-red-100 text-red-600 hover:bg-red-50">
                 Модерация задач

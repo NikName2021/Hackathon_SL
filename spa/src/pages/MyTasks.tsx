@@ -17,13 +17,15 @@ import {
   Paperclip,
   Tag,
   Download,
-  AlertCircle
+  AlertCircle,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SubmissionModal } from '@/components/SubmissionModal';
 import { ChatComponent } from '@/components/ChatComponent';
 import { useAuth } from '@/context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import type { TaskTeam } from '@/types';
 
 export const MyTasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -34,6 +36,7 @@ export const MyTasks: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatTask, setChatTask] = useState<Task | null>(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchMyTasks = async () => {
     try {
@@ -47,6 +50,10 @@ export const MyTasks: React.FC = () => {
   };
 
   useEffect(() => {
+    if (user && user.role === 'admin') {
+      navigate('/');
+      return;
+    }
     fetchMyTasks();
   }, []);
 
@@ -77,7 +84,8 @@ export const MyTasks: React.FC = () => {
   const getApplicationStatus = (task: Task) => {
     if (!isStudent || !user || !task.applications) return null;
     const myApp = task.applications.find((app: any) => 
-      app.student_id === user.id || app.student?.id === user.id
+      app.student_id === user.id || app.student?.id === user.id || 
+      (app.team && app.team.members.some((m: any) => m.user_id === user.id))
     );
     return myApp?.status || null;
   };
@@ -171,11 +179,16 @@ export const MyTasks: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-surface-500 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded">
-                          {task.category?.name || 'Общее'}
-                        </span>
-                        {getStatusBadge(task.status, getApplicationStatus(task))}
-                      </div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-surface-500 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded">
+                            {task.category?.name || 'Общее'}
+                          </span>
+                          {task.team && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-0.5 rounded flex items-center gap-1">
+                              <Users className="w-3 h-3" /> Команда
+                            </span>
+                          )}
+                          {getStatusBadge(task.status, getApplicationStatus(task))}
+                        </div>
                       <h3 className="text-lg font-bold text-surface-900 dark:text-white group-hover:text-primary-600 transition-colors">
                         {task.title}
                       </h3>
@@ -185,23 +198,30 @@ export const MyTasks: React.FC = () => {
                           Причина: {task.rejection_reason}
                         </div>
                       )}
-                      <div className="flex items-center gap-4 mt-2 text-sm text-surface-500">
-                        <div className="flex items-center gap-1 font-bold text-primary-600">
-                          <span>{task.points_reward} KP</span>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-surface-500">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1 font-bold text-primary-600">
+                              <span>{task.points_reward} KP</span>
+                              {task.team && (
+                                <span className="text-[10px] font-normal text-surface-400">
+                                  (Всего за проект)
+                                </span>
+                              )}
+                            </div>
+                            {task.team && (
+                              <div className="text-[10px] font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                <Award className="w-3 h-3" /> 
+                                {Math.ceil(task.points_reward / task.team.members.length)} KP для вас
+                              </div>
+                            )}
+                          </div>
+                          {task.deadline && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>До {new Date(task.deadline).toLocaleDateString()}</span>
+                            </div>
+                          )}
                         </div>
-                        {task.deadline && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>До {new Date(task.deadline).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                        {!isStudent && (
-                          <div className="flex items-center gap-1 text-surface-400">
-                            <Users className="w-3 h-3" />
-                            <span>{task.applications?.length || 0} откликов</span>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </div>
                   
@@ -356,6 +376,39 @@ export const MyTasks: React.FC = () => {
                               </p>
                             </div>
                           </motion.div>
+                        )}
+
+                        {/* Team Section */}
+                        {task.team && (
+                          <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100/50 dark:border-purple-500/10 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                                <Users className="w-3 h-3" /> Участники команды: {task.team.name || 'Без названия'}
+                              </h4>
+                              <div className="text-[10px] font-bold text-purple-600 bg-white dark:bg-surface-800 px-2 py-1 rounded-lg border border-purple-100 dark:border-white/5 shadow-sm flex items-center gap-1">
+                                <Award className="w-3 h-3" /> 
+                                Разделение: {Math.ceil(task.points_reward / task.team.members.length)} KP каждому
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {task.team.members.map((member) => (
+                                <div key={member.id} className="flex items-center gap-2 bg-white dark:bg-surface-800 px-3 py-1.5 rounded-lg border border-purple-100 dark:border-white/5 shadow-sm">
+                                  <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-[10px] font-bold text-purple-600">
+                                    {member.user.full_name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="text-xs font-bold text-surface-900 dark:text-white leading-none mb-0.5">
+                                      {member.user.full_name}
+                                      {member.user_id === task.team?.creator_id && (
+                                        <span className="ml-1 text-[8px] uppercase text-purple-500 font-black tracking-tighter">(Лидер)</span>
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-surface-400 leading-none">Репутация: {member.user.reputation}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
 
                         {/* Description Section */}

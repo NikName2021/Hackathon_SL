@@ -41,6 +41,7 @@ export interface AuthResponse {
 
 export type TaskStatus = 'pending_approval' | 'open' | 'in_progress' | 'review' | 'completed' | 'cancelled';
 export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn';
+export type TeamStatus = 'recruiting' | 'applied' | 'active' | 'completed';
 
 export interface Category {
   id: number;
@@ -55,6 +56,7 @@ export interface TaskApplication {
   message?: string;
   status: ApplicationStatus;
   applied_at: string;
+  team?: TaskTeam;
 }
 
 export interface TaskAttachment {
@@ -81,6 +83,34 @@ export interface Task {
   rejection_reason?: string;
   skills: Skill[];
   attachments: TaskAttachment[];
+  team?: TaskTeam;
+}
+
+export interface TeamMember {
+  id: number;
+  user_id: number;
+  user: {
+    id: number;
+    full_name: string;
+    role: Role;
+    reputation: number;
+  };
+}
+
+export interface TaskTeam {
+  id: number;
+  task_id: number;
+  creator_id: number;
+  name?: string;
+  status: TeamStatus;
+  created_at: string;
+  creator: {
+    id: number;
+    full_name: string;
+    role: Role;
+    reputation: number;
+  };
+  members: TeamMember[];
 }
 
 export interface Submission {
@@ -113,11 +143,19 @@ export interface GamificationStats {
   skill_distribution: Array<{ subject: string; A: number; fullMark: number }>;
 }
 
+export interface DailyActivity {
+  date: string;
+  tasks: number;
+  users: number;
+  points: number;
+}
+
 export interface AdminStats {
   total_users: number;
   total_tasks: number;
   pending_tasks: number;
   total_points_awarded: number;
+  activity_log: DailyActivity[];
 }
 
 export interface DashboardStats {
@@ -146,6 +184,7 @@ export interface FAQArticle {
   title: string;
   slug: string;
   content: string;
+  target_role: Role | null;
   is_published: boolean;
   created_at: string;
   updated_at: string;

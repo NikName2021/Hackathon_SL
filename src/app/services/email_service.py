@@ -1,6 +1,6 @@
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from pydantic import EmailStr
-from core.config import SMTP_USER, SMTP_PASSWORD, SMTP_SERVER, SMTP_PORT, MAIL_FROM, FRONTEND_URL, SECRET_KEY, ALGORITHM
+from core.config import SMTP_USER, SMTP_PASSWORD, SMTP_SERVER, SMTP_PORT, MAIL_FROM, FRONTEND_URL, SECRET_KEY, ALGORITHM, DEBUG
 import jwt
 from datetime import datetime, timedelta
 
@@ -27,6 +27,8 @@ class EmailService:
 
     @staticmethod
     async def send_verification_email(email: str, token: str):
+        if DEBUG:
+            return
         verification_url = f"{FRONTEND_URL}/verify-email?token={token}"
         
         html = f"""
@@ -69,6 +71,8 @@ class EmailService:
 
     @staticmethod
     async def send_password_reset_email(email: str, token: str):
+        if DEBUG:
+            return
         reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
         
         html = f"""

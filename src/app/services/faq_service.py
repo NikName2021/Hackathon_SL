@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from database.all_models import Role
 
 from repositories.faq import FAQRepository
 from schemas.faq import FAQCreate, FAQUpdate
@@ -7,8 +8,8 @@ from schemas.faq import FAQCreate, FAQUpdate
 
 class FAQService:
     @staticmethod
-    async def list_public(session: AsyncSession):
-        return await FAQRepository.get_all_published(session)
+    async def list_public(session: AsyncSession, role: Role | None = None):
+        return await FAQRepository.get_all_published(session, role)
 
     @staticmethod
     async def list_all(session: AsyncSession):
@@ -31,6 +32,7 @@ class FAQService:
             slug=data.slug,
             content=data.content,
             is_published=data.is_published,
+            target_role=data.target_role,
             session=session,
         )
 

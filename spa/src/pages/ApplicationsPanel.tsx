@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import type { User, Task } from '@/types';
-import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle, ExternalLink } from 'lucide-react';
+import type { User, Task, TaskTeam } from '@/types';
+import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle, ExternalLink, Users, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserProfileModal } from '@/components/UserProfileModal';
 
@@ -15,6 +15,7 @@ interface Application {
   message: string;
   status: string;
   created_at: string;
+  team?: TaskTeam;
 }
 
 export const ApplicationsPanel: React.FC = () => {
@@ -107,7 +108,7 @@ export const ApplicationsPanel: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
               >
-                <Card className="overflow-hidden border-l-4 border-l-primary-500">
+                <Card className={`overflow-hidden border-l-4 ${app.team ? 'border-l-purple-500' : 'border-l-primary-500'}`}>
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row justify-between gap-6">
                       <div className="space-y-4 flex-1">
@@ -119,9 +120,16 @@ export const ApplicationsPanel: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <h3 className="text-lg font-bold text-surface-900 dark:text-white">
-                                {app.student.full_name}
-                              </h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-bold text-surface-900 dark:text-white">
+                                  {app.student.full_name}
+                                </h3>
+                                {app.team && (
+                                  <span className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <Users className="w-3 h-3" /> Команда: {app.team.name || 'Без названия'}
+                                  </span>
+                                )}
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -154,6 +162,33 @@ export const ApplicationsPanel: React.FC = () => {
                             "{app.message || 'Без сообщения'}"
                           </p>
                         </div>
+
+                        {app.team && (
+                          <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100/50 dark:border-purple-500/10 space-y-3">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                              <Users className="w-3 h-3" /> Состав команды
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {app.team.members.map((member) => (
+                                <div key={member.id} className="flex items-center gap-2 bg-white dark:bg-surface-800 px-3 py-1.5 rounded-lg border border-purple-100 dark:border-white/5 shadow-sm">
+                                  <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-[10px] font-bold text-purple-600">
+                                    {member.user.full_name.charAt(0)}
+                                  </div>
+                                  <span className="text-xs font-medium text-surface-700 dark:text-surface-200">
+                                    {member.user.full_name}
+                                  </span>
+                                  <span className="text-[10px] text-surface-400">
+                                    (Rep: {member.user.reputation})
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="text-[10px] text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1 mt-1">
+                              <Award className="w-3 h-3" /> 
+                              Каждый получит по {Math.ceil(app.task.points_reward / app.team.members.length)} KP
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-surface-500">Отклик на задачу:</span>

@@ -20,7 +20,7 @@ router = APIRouter(prefix="/tasks", tags=["Задачи"])
 @router.post("/", response_model=TaskResponse)
 async def create_task(
     task_data: TaskCreate,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.create_task(task_data, current_user.id, db)
@@ -30,7 +30,7 @@ async def create_task(
 async def update_task(
     task_id: int,
     task_data: TaskUpdate,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.update_task(task_id, current_user.id, task_data, db)
@@ -180,7 +180,7 @@ async def reject_application(
 @router.post("/{task_id}/complete", response_model=TaskResponse)
 async def complete_task(
     task_id: int,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.complete_task(task_id, current_user.id, db)
@@ -200,7 +200,7 @@ async def submit_task(
 async def review_task(
     task_id: int,
     review_data: TaskReview,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.review_task(task_id, current_user.id, review_data, db)
@@ -219,7 +219,7 @@ async def get_task_by_id(
 async def upload_attachments(
     task_id: int,
     files: List[UploadFile] = File(...),
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.upload_attachments(task_id, files, db)
@@ -228,7 +228,7 @@ async def upload_attachments(
 @router.delete("/attachments/{attachment_id}")
 async def delete_attachment(
     attachment_id: int,
-    current_user: User = Depends(RoleChecker([Role.EMPLOYEE, Role.ADMIN])),
+    current_user: User = Depends(RoleChecker([Role.EMPLOYEE])),
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.delete_attachment(attachment_id, db)

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import async_get_db
 from database.all_models import Role, User
-from helpers.auth import RoleChecker
+from helpers.auth import RoleChecker, get_current_user
 from schemas.faq import FAQCreate, FAQResponse, FAQUpdate
 from services.faq_service import FAQService
 
@@ -13,8 +13,11 @@ router = APIRouter(prefix="/faq", tags=["FAQ"])
 
 
 @router.get("/", response_model=List[FAQResponse])
-async def list_faq_public(db: AsyncSession = Depends(async_get_db)):
-    return await FAQService.list_public(db)
+async def list_faq_public(
+    db: AsyncSession = Depends(async_get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await FAQService.list_public(db, current_user.role)
 
 
 @router.get("/admin", response_model=List[FAQResponse])

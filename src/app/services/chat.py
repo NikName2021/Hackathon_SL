@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.chat import ChatRepository
 from repositories.task import TaskRepository
 from database.all_models import Role, ApplicationStatus
+from services.watermark_service import WatermarkService
 
 class ChatService:
     @staticmethod
@@ -27,7 +28,7 @@ class ChatService:
         return await ChatRepository.create(task_id, sender_id, content, session)
 
     @staticmethod
-    async def send_file_message(task_id: int, sender_id: int, file: UploadFile, content: str, role: Role, session: AsyncSession):
+    async def send_file_message(task_id: int, sender_id: int, file: UploadFile, content: str, role: Role, session: AsyncSession, is_secure: bool = False):
         task = await TaskRepository.get_by_id(task_id, session)
         if not task:
             raise HTTPException(status_code=404, detail="Задача не найдена")
@@ -53,6 +54,12 @@ class ChatService:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
+        # Apply Watermark if secure
+        if is_secure:
+            from datetime import datetime
+            cipher = f"TRC-T{task_id}-U{sender_id}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            WatermarkService.apply_watermark(file_path, cipher)
+            
         file_url = f"/uploads/chat_attachments/{unique_filename}"
         file_type = "image" if file.content_type.startswith("image/") else "file"
         
@@ -63,7 +70,8 @@ class ChatService:
             session=session,
             file_url=file_url,
             file_name=file.filename,
-            file_type=file_type
+            file_type=file_type,
+            is_secure_file=is_secure
         )
 
     @staticmethod

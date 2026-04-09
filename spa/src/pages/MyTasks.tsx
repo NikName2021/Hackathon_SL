@@ -484,6 +484,7 @@ export const MyTasks: React.FC = () => {
         <ChatComponent
           taskId={chatTask.id}
           taskTitle={chatTask.title}
+          isConfidential={chatTask.is_confidential}
           isOpen={isChatOpen}
           onClose={() => setIsChatOpen(false)}
         />

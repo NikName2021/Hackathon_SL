@@ -16,6 +16,7 @@ class TaskCreateDTO(BaseModel):
     owner_id: int
     points_reward: int = 0
     deadline: datetime | None = None
+    is_confidential: bool = False
 
 
 class TaskRepository:

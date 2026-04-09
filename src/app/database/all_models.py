@@ -135,6 +135,7 @@ class Task(DeclBase):
     points_reward = Column(Integer, default=0)
     rejection_reason = Column(String, nullable=True)
     deadline = Column(DateTime)
+    is_confidential = Column(Boolean, default=False)
     created_date = Column(DateTime, default=datetime.datetime.now)
 
     owner = relationship("User", back_populates="created_tasks", foreign_keys=[owner_id])
@@ -225,6 +226,7 @@ class ChatMessage(DeclBase):
     file_url = Column(String, nullable=True)
     file_name = Column(String, nullable=True)
     file_type = Column(String, nullable=True) # 'image' or 'file'
+    is_secure_file = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
     task = relationship("Task")

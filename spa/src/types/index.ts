@@ -87,6 +87,7 @@ export interface Task {
   applications?: TaskApplication[];
   points_reward: number;
   status: TaskStatus;
+  is_confidential?: boolean;
   created_at: string;
   deadline?: string;
   latest_submission?: Submission;
@@ -130,6 +131,7 @@ export interface Submission {
   content: string;
   status?: string;
   feedback?: string;
+  is_secure_file?: boolean;
   submitted_at: string;
 }
 

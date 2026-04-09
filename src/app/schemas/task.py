@@ -74,6 +74,7 @@ class TaskCreate(BaseModel):
     category_id: int | None = None
     points_reward: int = 0
     deadline: datetime | None = None
+    is_confidential: bool = False
     skills: List[str] = []
 
 
@@ -85,6 +86,7 @@ class TaskUpdate(BaseModel):
     category_id: Optional[int] = None
     points_reward: Optional[int] = None
     deadline: Optional[datetime] = None
+    is_confidential: Optional[bool] = None
     skills: Optional[List[str]] = None
 
 
@@ -140,6 +142,7 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     points_reward: int
     deadline: datetime | None
+    is_confidential: bool = False
     created_date: datetime
     owner: UserShortResponse
     category: CategoryResponse | None = None

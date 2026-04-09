@@ -33,6 +33,7 @@ export const EditTask: React.FC = () => {
   const [pointsReward, setPointsReward] = useState('10');
   const [categoryId, setCategoryId] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isConfidential, setIsConfidential] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -70,6 +71,7 @@ export const EditTask: React.FC = () => {
         setDeadline(toDatetimeLocal(task.deadline));
         setPointsReward(String(task.points_reward));
         setCategoryId(String(task.category?.id || ''));
+        setIsConfidential(task.is_confidential || false);
         setExistingAttachments(task.attachments || []);
         setSkills((task.skills || []).map((skill) => skill.name));
       } catch (e) {
@@ -100,6 +102,7 @@ export const EditTask: React.FC = () => {
         points_reward: parseInt(pointsReward, 10),
         category_id: categoryId ? parseInt(categoryId, 10) : null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
+        is_confidential: isConfidential,
         skills
       });
 
@@ -251,6 +254,24 @@ export const EditTask: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeadline(e.target.value)}
             required
           />
+
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary-500/5 border border-primary-500/20">
+            <input
+              type="checkbox"
+              id="is_confidential"
+              checked={isConfidential}
+              onChange={(e) => setIsConfidential(e.target.checked)}
+              className="w-5 h-5 rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+            />
+            <div>
+              <label htmlFor="is_confidential" className="text-sm font-bold text-surface-900 dark:text-white block">
+                Конфиденциальные данные
+              </label>
+              <p className="text-[10px] text-surface-500">
+                Автоматическое наложение водяных знаков на документы в чате
+              </p>
+            </div>
+          </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/5">
             <h3 className="text-sm font-medium text-surface-800 dark:text-surface-100 flex items-center justify-between">

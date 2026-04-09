@@ -19,6 +19,7 @@ export const CreateTask: React.FC = () => {
   const [pointsReward, setPointsReward] = useState('10');
   const [categoryId, setCategoryId] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isConfidential, setIsConfidential] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState('');
@@ -69,6 +70,7 @@ export const CreateTask: React.FC = () => {
         points_reward: parseInt(pointsReward, 10),
         category_id: parseInt(categoryId, 10),
         deadline: deadline ? new Date(deadline).toISOString() : null,
+        is_confidential: isConfidential,
         skills
       });
 
@@ -198,6 +200,24 @@ export const CreateTask: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDeadline(e.target.value)}
             required
           />
+
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary-500/5 border border-primary-500/20">
+            <input
+              type="checkbox"
+              id="is_confidential"
+              checked={isConfidential}
+              onChange={(e) => setIsConfidential(e.target.checked)}
+              className="w-5 h-5 rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+            />
+            <div>
+              <label htmlFor="is_confidential" className="text-sm font-bold text-surface-900 dark:text-white block">
+                Конфиденциальные данные
+              </label>
+              <p className="text-[10px] text-surface-500">
+                Автоматическое наложение водяных знаков на документы в чате
+              </p>
+            </div>
+          </div>
 
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-surface-800 dark:text-surface-100 ml-1 flex justify-between items-center">

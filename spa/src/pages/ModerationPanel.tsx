@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { apiClient } from '@/api/client';
 import type { Task, Skill, TaskAttachment } from '@/types';
 import { 
@@ -12,15 +13,108 @@ import {
   ChevronRight, 
   Tag, 
   Paperclip, 
-  Download 
+  Download,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const REJECTION_REASONS = [
+  "Недостаточное описание задачи",
+  "Награда не соответствует сложности",
+  "Некорректно выбрана категория",
+  "Неприемлемый контент",
+  "Другое"
+];
+
+const RejectionModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isProcessing: boolean;
+}> = ({ isOpen, onClose, onConfirm, isProcessing }) => {
+  const [selectedReason, setSelectedReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    const finalReason = selectedReason === "Другое" ? customReason : selectedReason;
+    if (finalReason.trim()) {
+      onConfirm(finalReason);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-lg"
+      >
+        <Card className="p-8 shadow-2xl space-y-6">
+          <div className="flex items-center gap-4 text-red-500 mb-2">
+            <XCircle className="w-8 h-8" />
+            <h2 className="text-2xl font-bold text-surface-900 dark:text-white">Отклонение задачи</h2>
+          </div>
+          
+          <p className="text-surface-500">Укажите причину отклонения. Заказчик увидит этот комментарий и сможет внести исправления.</p>
+          
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-surface-400 uppercase">Выберите критерий</label>
+            <div className="grid grid-cols-1 gap-2">
+              {REJECTION_REASONS.map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => setSelectedReason(reason)}
+                  className={`text-left px-4 py-3 rounded-xl border transition-all ${
+                    selectedReason === reason 
+                      ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 font-bold" 
+                      : "border-surface-200 dark:border-white/10 hover:bg-surface-50 dark:hover:bg-white/5"
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selectedReason === "Другое" && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+              <Input 
+                autoFocus
+                placeholder="Опишите причину подробно..."
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+              />
+            </motion.div>
+          )}
+
+          <div className="flex gap-3 pt-4 border-t border-surface-100 dark:border-white/5">
+            <Button variant="ghost" onClick={onClose} className="flex-1">Отмена</Button>
+            <Button 
+              variant="primary" 
+              onClick={handleConfirm} 
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              isLoading={isProcessing}
+              disabled={!selectedReason || (selectedReason === "Другое" && !customReason.trim())}
+            >
+              Отклонить задачу
+            </Button>
+          </div>
+        </Card>
+      </motion.div>
+    </div>
+  );
+};
 
 export const ModerationPanel: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<number | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [taskToReject, setTaskToReject] = useState<number | null>(null);
 
   const toggleExpand = (taskId: number) => {
     setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
@@ -41,17 +135,27 @@ export const ModerationPanel: React.FC = () => {
     fetchPendingTasks();
   }, []);
 
-  const handleModeration = async (taskId: number, approve: boolean) => {
+  const handleApprove = async (taskId: number) => {
     setIsProcessing(taskId);
     try {
-      // In TaskService: approve_task moves it to OPEN, reject_task to CANCELLED
-      const endpoint = approve ? `/tasks/${taskId}/approve` : `/tasks/${taskId}/reject`;
-      // Note: We need to make sure these endpoints are exposed in the router!
-      // Let's check routes first. Wait, I saw approve_task in TaskService but I need to check if it's in task.py router.
-      await apiClient.post(endpoint);
+      await apiClient.post(`/tasks/${taskId}/approve`);
       setTasks(prev => prev.filter(t => t.id !== taskId));
     } catch (error) {
-      console.error('Moderation failed:', error);
+      console.error('Approval failed:', error);
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleReject = async (taskId: number, reason: string) => {
+    setIsProcessing(taskId);
+    try {
+      await apiClient.post(`/tasks/${taskId}/reject`, { reason });
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      setRejectionModalOpen(false);
+      setTaskToReject(null);
+    } catch (error) {
+      console.error('Rejection failed:', error);
     } finally {
       setIsProcessing(null);
     }
@@ -127,7 +231,7 @@ export const ModerationPanel: React.FC = () => {
                     <div className="flex flex-row md:flex-col gap-3 justify-end shrink-0 self-center">
                       <div className="flex gap-2">
                         <Button
-                          onClick={() => handleModeration(task.id, true)}
+                          onClick={() => handleApprove(task.id)}
                           isLoading={isProcessing === task.id}
                           variant="primary"
                           size="sm"
@@ -137,7 +241,10 @@ export const ModerationPanel: React.FC = () => {
                           Одобрить
                         </Button>
                         <Button
-                          onClick={() => handleModeration(task.id, false)}
+                          onClick={() => {
+                            setTaskToReject(task.id);
+                            setRejectionModalOpen(true);
+                          }}
                           isLoading={isProcessing === task.id}
                           variant="outline"
                           size="sm"
@@ -227,6 +334,18 @@ export const ModerationPanel: React.FC = () => {
           </AnimatePresence>
         </div>
       )}
+
+      <RejectionModal 
+        isOpen={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setTaskToReject(null);
+        }}
+        onConfirm={(reason) => {
+          if (taskToReject) handleReject(taskToReject, reason);
+        }}
+        isProcessing={isProcessing !== null}
+      />
     </div>
   );
 };

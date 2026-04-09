@@ -16,6 +16,7 @@ export const Register: React.FC = () => {
   const [role, setRole] = useState<'student' | 'employee'>('student');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -31,15 +32,48 @@ export const Register: React.FC = () => {
         username: fullName,
         role: role,
       });
-      setAccessToken(response.data.token.access_token);
-      login(response.data.user);
-      navigate('/');
+      
+      if (response.data.token.access_token === "verification_required") {
+        setIsSuccess(true);
+      } else {
+        setAccessToken(response.data.token.access_token);
+        login(response.data.user);
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Ошибка регистрации.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-md"
+        >
+          <Card className="text-center p-12 space-y-6">
+            <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/30 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Mail className="w-10 h-10 animate-bounce" />
+            </div>
+            <h2 className="text-2xl font-bold">Подтвердите почту</h2>
+            <p className="text-surface-600 dark:text-surface-400">
+              Мы отправили письмо на адрес <span className="font-bold text-primary-600">{email}</span>. 
+              Пожалуйста, перейдите по ссылке в письме, чтобы завершить регистрацию.
+            </p>
+            <Link to="/login" className="block pt-4">
+              <Button variant="outline" className="w-full">
+                Вернуться ко входу
+              </Button>
+            </Link>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

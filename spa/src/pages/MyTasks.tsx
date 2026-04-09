@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Paperclip,
   Tag,
-  Download
+  Download,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SubmissionModal } from '@/components/SubmissionModal';
@@ -178,6 +179,12 @@ export const MyTasks: React.FC = () => {
                       <h3 className="text-lg font-bold text-surface-900 dark:text-white group-hover:text-primary-600 transition-colors">
                         {task.title}
                       </h3>
+                      {task.status === 'cancelled' && task.rejection_reason && (
+                        <div className="mt-1 flex items-center gap-2 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg w-fit">
+                          <AlertCircle className="w-3 h-3" />
+                          Причина: {task.rejection_reason}
+                        </div>
+                      )}
                       <div className="flex items-center gap-4 mt-2 text-sm text-surface-500">
                         <div className="flex items-center gap-1 font-bold text-primary-600">
                           <span>{task.points_reward} KP</span>
@@ -331,6 +338,26 @@ export const MyTasks: React.FC = () => {
                       className="overflow-hidden"
                     >
                       <div className="pt-6 mt-6 border-t border-surface-100 dark:border-white/5 space-y-6">
+                        {/* Rejection Reason Section */}
+                        {task.status === 'cancelled' && task.rejection_reason && (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl flex gap-3"
+                          >
+                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="text-sm font-bold text-red-700 dark:text-red-400">Задача отклонена модератором</h4>
+                              <p className="text-sm text-red-600 dark:text-red-300 mt-1 italic">
+                                "{task.rejection_reason}"
+                              </p>
+                              <p className="text-xs text-red-500/70 mt-2">
+                                Пожалуйста, отредактируйте задачу в соответствии с замечаниями и отправьте её снова.
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+
                         {/* Description Section */}
                         <div>
                           <h4 className="text-xs font-bold uppercase tracking-wider text-surface-400 mb-2">Описание задачи</h4>

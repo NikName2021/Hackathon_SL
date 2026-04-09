@@ -34,7 +34,20 @@ class AuthService:
             full_name=user_data.username,
             role=role_enum
         )
-        return await UserRepository.create(new_user_dto, session)
+        user = await UserRepository.create(new_user_dto, session)
+        
+        # Trigger verification email
+        try:
+            from services.email_service import EmailService
+            token = EmailService.create_verification_token(user.id)
+            await EmailService.send_verification_email(user.email, token)
+        except Exception as e:
+            # We don't want to crash the whole registration if email fails, 
+            # though locally it might. In production, we'd use a background task.
+            from core.config import logger
+            logger.error(f"Failed to send verification email: {e}")
+            
+        return user
 
     @staticmethod
     async def authenticate_user(user_data: UserLogin, session: AsyncSession):
@@ -51,6 +64,12 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Ваш аккаунт заблокирован. Пожалуйста, свяжитесь с администрацией."
+            )
+
+        if not user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Пожалуйста, подтвердите вашу почту перед входом."
             )
 
         jti = str(uuid.uuid4())
@@ -102,6 +121,72 @@ class AuthService:
     async def logout(current_user_id: int, refresh_token_jti: str, session: AsyncSession):
         # We need the JTI from the token being used/cleared
         await UserRepository.revoke_refresh_token(refresh_token_jti, session)
+        return {"status": "ok"}
+
+    @staticmethod
+    async def verify_email(token: str, session: AsyncSession):
+        from helpers.auth import decode_token
+        payload = decode_token(token)
+        
+        if not payload or payload.get("scope") != "email_verification":
+            raise HTTPException(status_code=400, detail="Неверная или просроченная ссылка для подтверждения")
+        
+        user_id = payload.get("user_id")
+        user = await UserRepository.get_by_id(user_id, session)
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+            
+        if user.is_verified:
+            return {"status": "already_verified"}
+            
+        # Update user
+        from sqlalchemy import update
+        from database.all_models import User
+        stmt = update(User).where(User.id == user_id).values(is_verified=True)
+        await session.execute(stmt)
+        await session.commit()
+        
+        return {"status": "ok"}
+
+    @staticmethod
+    async def request_password_reset(email: str, session: AsyncSession):
+        user = await UserRepository.get_by_email(email, session)
+        if not user:
+            # We don't want to leak if an email exists, so we return OK but don't send anything
+            return {"status": "ok"}
+            
+        from services.email_service import EmailService
+        token = EmailService.create_password_reset_token(user.id)
+        await EmailService.send_password_reset_email(user.email, token)
+        return {"status": "ok"}
+
+    @staticmethod
+    async def complete_password_reset(token: str, new_password: str, session: AsyncSession):
+        from helpers.auth import decode_token, hash_password
+        payload = decode_token(token)
+        
+        if not payload or payload.get("scope") != "password_reset":
+            raise HTTPException(status_code=400, detail="Неверная или просроченная ссылка для сброса пароля")
+            
+        user_id = payload.get("user_id")
+        user = await UserRepository.get_by_id(user_id, session)
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+            
+        # Update password
+        from sqlalchemy import update
+        from database.all_models import User
+        hashed_pwd = hash_password(new_password)
+        stmt = update(User).where(User.id == user_id).values(hashed_password=hashed_pwd)
+        await session.execute(stmt)
+        
+        # Also revoke all old sessions for security
+        from database.all_models import IssuedJWTToken
+        stmt_revoke = update(IssuedJWTToken).where(IssuedJWTToken.user_id == user_id).values(revoked=True)
+        await session.execute(stmt_revoke)
+        
+        await session.commit()
         return {"status": "ok"}
 
 

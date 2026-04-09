@@ -52,9 +52,14 @@ async def seed_demo_data(session: AsyncSession):
     if not _env_bool("DEMO_SEED", default=True):
         return
 
-    users_stmt = select(User).where(
-        User.email.in_(["admin@demo.local", "employee@demo.local", "student@demo.local"])
-    )
+    demo_emails = [
+        "admin@demo.local", "employee@demo.local", "student@demo.local",
+        "ivanov@demo.local", "petrov@demo.local", "sidorov@demo.local",
+        "kuznetsov@demo.local", "volkov@demo.local", "lebedeva@demo.local",
+        "morozova@demo.local", "smirnov@demo.local"
+    ]
+    
+    users_stmt = select(User).where(User.email.in_(demo_emails))
     users_result = await session.execute(users_stmt)
     users = {user.email: user for user in users_result.scalars().all()}
 

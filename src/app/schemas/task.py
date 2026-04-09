@@ -132,6 +132,7 @@ class TaskResponse(BaseModel):
     created_date: datetime
     owner: UserShortResponse
     category: CategoryResponse | None = None
+    rejection_reason: str | None = None
     applications: List[ApplicationResponse] = []
     latest_submission: Optional[SubmissionResponse] = None
     skills: List[SkillResponse] = []
@@ -168,6 +169,10 @@ class SubmissionCreate(BaseModel):
 class TaskReview(BaseModel):
     is_approved: bool
     feedback: str | None = None
+
+
+class TaskReject(BaseModel):
+    reason: str
 
 
 class PointTransactionResponse(BaseModel):

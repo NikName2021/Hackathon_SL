@@ -16,6 +16,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
+
 def validate_file(file: Union[UploadFile, str, None]) -> Optional[UploadFile]:
     if file is None:
         return None

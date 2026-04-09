@@ -54,6 +54,12 @@ POSTGRES_PASSWORD: str = config("POSTGRES_PASSWORD", cast=str, default="<PASSWOR
 POSTGRES_DB: str = config("POSTGRES_DATABASE", cast=str, default="postgres")
 
 BOT_TOKEN: str = config("BOT_TOKEN", cast=str, default="")
+SMTP_USER: str = config("SMTP_USER", default="test@gmail.com")
+SMTP_PASSWORD: str = config("SMTP_PASSWORD", default="your_app_password")
+SMTP_SERVER: str = config("SMTP_SERVER", default="smtp.gmail.com")
+SMTP_PORT: int = config("SMTP_PORT", cast=int, default=587)
+MAIL_FROM: str = config("MAIL_FROM", default="test@gmail.com")
+FRONTEND_URL: str = config("FRONTEND_URL", default="http://localhost:3000")
 
 engine = create_async_engine(
     get_db_path(POSTGRES_USER, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB,

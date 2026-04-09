@@ -68,6 +68,7 @@ class User(DeclBase):
     points = Column(Integer, default=0)
     reputation = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
     
     # Profile fields
     bio = Column(String, nullable=True)
@@ -132,6 +133,7 @@ class Task(DeclBase):
     assignee_id = Column(Integer, ForeignKey("user.id"), nullable=True)
     status = Column(SQLAlchemyEnum(TaskStatus), default=TaskStatus.OPEN)
     points_reward = Column(Integer, default=0)
+    rejection_reason = Column(String, nullable=True)
     deadline = Column(DateTime)
     created_date = Column(DateTime, default=datetime.datetime.now)
 

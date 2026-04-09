@@ -78,6 +78,7 @@ export interface Task {
   created_at: string;
   deadline?: string;
   latest_submission?: Submission;
+  rejection_reason?: string;
   skills: Skill[];
   attachments: TaskAttachment[];
 }

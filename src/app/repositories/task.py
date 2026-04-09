@@ -30,6 +30,11 @@ class TaskRepository:
         deadline_before: datetime | None = None,
         deadline_after: datetime | None = None,
     ):
+        if deadline_before and deadline_before.tzinfo:
+            deadline_before = deadline_before.replace(tzinfo=None)
+        if deadline_after and deadline_after.tzinfo:
+            deadline_after = deadline_after.replace(tzinfo=None)
+            
         stmt = select(Task).options(
             selectinload(Task.owner).selectinload(User.skills),
             selectinload(Task.owner).selectinload(User.achievements),
@@ -115,6 +120,11 @@ class TaskRepository:
     @staticmethod
     async def create(task_data: TaskCreateDTO, session: AsyncSession, skill_names: list[str] = None) -> Task:
         data = task_data.model_dump()
+        
+        # Ensure deadline is naive to prevent (naive vs aware) errors in PostgreSQL
+        if data.get("deadline") and data["deadline"].tzinfo:
+            data["deadline"] = data["deadline"].replace(tzinfo=None)
+            
         task = Task(**data)
         task.skills = [] # Initialize collection to avoid lazy loading triggers
         
@@ -139,6 +149,8 @@ class TaskRepository:
         if task:
             for key, value in update_data.items():
                 if value is not None:
+                    if key == "deadline" and isinstance(value, datetime) and value.tzinfo:
+                        value = value.replace(tzinfo=None)
                     setattr(task, key, value)
             
             if skill_names is not None:
@@ -162,10 +174,12 @@ class TaskRepository:
         return task
 
     @staticmethod
-    async def update_status(task_id: int, status: TaskStatus, session: AsyncSession) -> Task | None:
+    async def update_status(task_id: int, status: TaskStatus, session: AsyncSession, reason: str | None = None) -> Task | None:
         task = await TaskRepository.get_by_id(task_id, session)
         if task:
             task.status = status
+            if reason:
+                task.rejection_reason = reason
             await session.commit()
             return await TaskRepository.get_by_id(task_id, session)
         return task

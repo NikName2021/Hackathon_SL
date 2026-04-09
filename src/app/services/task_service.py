@@ -57,15 +57,22 @@ class TaskService:
         task = await TaskService._get_task_or_404(task_id, session)
         if task.owner_id != owner_id:
             raise HTTPException(status_code=403, detail="Only owner can update task")
-        if task.status not in {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN}:
+        if task.status not in {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN, TaskStatus.CANCELLED}:
             raise HTTPException(status_code=400, detail="Task is not editable in current status")
 
-        return await TaskRepository.update(
+        updated_task = await TaskRepository.update(
             task_id,
             update_data.model_dump(exclude_unset=True, exclude={"skills"}),
             session,
             skill_names=update_data.skills,
         )
+        
+        # If task was cancelled (rejected), after edit move it back to moderation
+        if updated_task and updated_task.status == TaskStatus.CANCELLED:
+             # Reset status and clear rejection reason
+             await TaskRepository.update_status(task_id, TaskStatus.PENDING_APPROVAL, session, reason=None)
+             
+        return updated_task
 
     @staticmethod
     async def approve_task(task_id: int, session: AsyncSession):
@@ -75,11 +82,11 @@ class TaskService:
         return await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
 
     @staticmethod
-    async def reject_task(task_id: int, session: AsyncSession):
+    async def reject_task(task_id: int, reason: str, session: AsyncSession):
         task = await TaskService._get_task_or_404(task_id, session)
         if task.status not in {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN}:
             raise HTTPException(status_code=400, detail="Task cannot be rejected in current status")
-        return await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session)
+        return await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session, reason=reason)
 
     @staticmethod
     async def get_available_tasks(session: AsyncSession, category_id: int | None = None, user_id: int | None = None):

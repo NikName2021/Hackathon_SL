@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from core.config import async_get_db, logger, REFRESH_TOKEN_EXPIRE_DAYS
-from schemas.input_forms import UserCreate, UserLogin
+from schemas.input_forms import UserCreate, UserLogin, PasswordResetRequest, PasswordResetConfirm
 from schemas.task import UserShortResponse, AuthResponse, Token, UserResponse, ProfileUpdate
 from services.user_service import AuthService, ProfileService
 from helpers.auth import get_current_user, decode_token
@@ -22,24 +22,9 @@ async def register(
         logger.info(f"Request to register user: {user_data.email}")
         user = await AuthService.register_user(user_data, db)
         
-        # Immediate login after registration for better UX
-        login_data = await AuthService.authenticate_user(
-            UserLogin(email=user_data.email, password=user_data.password), 
-            db
-        )
-        
-        response.set_cookie(
-            key="refresh_token",
-            value=login_data["refresh_token"],
-            httponly=True,
-            max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-            samesite="lax",
-            secure=False # Set to True in production with HTTPS
-        )
-        
         return AuthResponse(
             user=UserShortResponse.model_validate(user),
-            token=Token(access_token=login_data["access_token"])
+            token=Token(access_token="verification_required")
         )
     except HTTPException as e:
         raise e
@@ -146,6 +131,46 @@ async def update_profile(
 ):
     user = await ProfileService.update_profile(current_user.id, update_data, db)
     return UserResponse.model_validate(user)
+
+
+@router.get("/verify-email")
+async def verify_email(
+    token: str,
+    db: AsyncSession = Depends(async_get_db)
+):
+    try:
+        return await AuthService.verify_email(token, db)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in verify_email: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при подтверждении почты")
+
+
+@router.post("/password-reset-request")
+async def password_reset_request(
+    data: PasswordResetRequest,
+    db: AsyncSession = Depends(async_get_db)
+):
+    try:
+        return await AuthService.request_password_reset(data.email, db)
+    except Exception as e:
+        logger.error(f"Error in password_reset_request: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при отправке письма для сброса пароля")
+
+
+@router.post("/password-reset-confirm")
+async def password_reset_confirm(
+    data: PasswordResetConfirm,
+    db: AsyncSession = Depends(async_get_db)
+):
+    try:
+        return await AuthService.complete_password_reset(data.token, data.new_password, db)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in password_reset_confirm: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при сбросе пароля")
 
 
 @router.post("/profile/avatar", response_model=UserResponse)

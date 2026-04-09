@@ -80,6 +80,14 @@ export const Login: React.FC = () => {
                   required
                 />
                 <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-[38px]" />
+                <div className="flex justify-end mt-1">
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-xs text-primary-600 hover:text-primary-500 font-medium"
+                  >
+                    Забыли пароль?
+                  </Link>
+                </div>
               </div>
             </div>
 

@@ -82,7 +82,7 @@ apiClient.interceptors.response.use(
         } else {
           // Refresh failed definitely
           setAccessToken(null);
-          const publicPages = ['/login', '/register'];
+          const publicPages = ['/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
           if (!publicPages.includes(window.location.pathname)) {
             window.location.href = '/login';
           }

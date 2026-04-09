@@ -22,7 +22,8 @@ import {
   Target,
   Users,
   BookOpen,
-  Medal
+  Medal,
+  Eye
 } from 'lucide-react';
 import { userApi } from '@/api/user';
 import { gamificationApi } from '@/api/gamification';
@@ -151,6 +152,8 @@ export const Profile: React.FC = () => {
 
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+  const isStudent = user.role === 'student';
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Notification */}
@@ -173,9 +176,13 @@ export const Profile: React.FC = () => {
       </AnimatePresence>
 
       {/* Hero Section with Level Progress */}
-      <Card className="p-8 relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-purple-800 text-white border-none">
+      <Card className={`p-8 relative overflow-hidden border-none text-white ${
+        isStudent 
+          ? 'bg-gradient-to-br from-primary-600 via-primary-700 to-purple-800' 
+          : 'bg-surface-900 dark:bg-white/5 shadow-2xl'
+      }`}>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full -ml-32 -mb-32 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full -ml-32 -mb-32 blur-3xl opacity-20" />
         
         <div className="relative flex flex-col md:flex-row items-center gap-8">
           <div className="relative group/avatar">
@@ -305,7 +312,7 @@ export const Profile: React.FC = () => {
 
           <Card className="p-8 space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-surface-900 to-surface-600 dark:from-white dark:to-surface-400">
+              <h3 className="text-xl font-bold text-surface-900 dark:text-white">
                 Личная информация
               </h3>
               {!isEditing ? (
@@ -429,15 +436,29 @@ export const Profile: React.FC = () => {
                 <FileText className="w-5 h-5 text-surface-400" />
                 Резюме
               </h3>
-              {user.resume_path && (
-                <a 
-                  href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
-                  download
-                  className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                >
-                  <Download className="w-5 h-5" />
-                </a>
-              )}
+              <div className="flex gap-1">
+                {user.resume_path && (
+                  <>
+                    <a 
+                      href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      title="Просмотреть"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </a>
+                    <a 
+                      href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                      download
+                      className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      title="Скачать"
+                    >
+                      <Download className="w-5 h-5" />
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
 
             {user.resume_path ? (

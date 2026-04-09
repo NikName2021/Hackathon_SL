@@ -7,7 +7,7 @@ from core.config import async_get_db, logger
 from schemas.task import (
     TaskCreate, TaskResponse, ApplicationCreate, ApplicationResponse, 
     SubmissionCreate, SubmissionResponse, TaskReview, DashboardStats, TaskUpdate,
-    RecommendedTaskResponse, TaskAttachmentResponse
+    RecommendedTaskResponse, TaskAttachmentResponse, TaskReject
 )
 from services.task_service import TaskService
 from services.recommendation_service import RecommendationService
@@ -142,10 +142,11 @@ async def approve_task(
 @router.post("/{task_id}/reject", response_model=TaskResponse)
 async def reject_task(
     task_id: int,
+    reject_data: TaskReject,
     current_user: User = Depends(RoleChecker([Role.ADMIN])),
     db: AsyncSession = Depends(async_get_db)
 ):
-    return await TaskService.reject_task(task_id, db)
+    return await TaskService.reject_task(task_id, reject_data.reason, db)
 
 
 @router.post("/{task_id}/apply", response_model=ApplicationResponse)

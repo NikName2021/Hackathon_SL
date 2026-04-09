@@ -7,7 +7,8 @@ import {
   Download, 
   CheckCircle2, 
   Trophy,
-  User as UserIcon
+  User as UserIcon,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { User, Skill } from '@/types';
@@ -105,14 +106,25 @@ export const UserProfileModal: React.FC<StudentProfileModalProps> = ({
                       <h3 className="text-sm font-bold uppercase tracking-wider text-surface-400 flex items-center gap-2">
                         <FileText className="w-4 h-4" /> Резюме
                       </h3>
-                      <a 
-                        href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
-                        download
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-surface-50 dark:bg-surface-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-surface-700 dark:text-surface-200 border border-surface-200 dark:border-surface-700 rounded-xl transition-all group"
-                      >
-                        <Download className="w-4 h-4 text-primary-500" />
-                        <span className="text-sm font-medium">Скачать PDF</span>
-                      </a>
+                      <div className="flex gap-2">
+                        <a 
+                          href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-all shadow-lg shadow-primary-500/20"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="text-sm font-medium">Посмотреть</span>
+                        </a>
+                        <a 
+                          href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                          download
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-surface-50 dark:bg-surface-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-surface-700 dark:text-surface-200 border border-surface-200 dark:border-surface-700 rounded-xl transition-all group"
+                        >
+                          <Download className="w-4 h-4 text-primary-500" />
+                          <span className="text-sm font-medium">Скачать PDF</span>
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>

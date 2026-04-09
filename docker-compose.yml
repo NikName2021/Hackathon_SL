@@ -48,6 +48,8 @@ services:
       - "80:80"
     depends_on:
       - postgres_pr
+    volumes:
+      - ./src/app/uploads:/usr/share/nginx/html/uploads:ro
     networks:
       - hackathon_SL_net
 

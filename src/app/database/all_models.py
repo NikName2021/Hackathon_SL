@@ -248,21 +248,3 @@ class FAQArticle(DeclBase):
 async def create_tables(engine: AsyncEngine):
     async with engine.begin() as conn:
         await conn.run_sync(DeclBase.metadata.create_all)
-        await conn.execute(
-            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS bio VARCHAR')
-        )
-        await conn.execute(
-            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS avatar_url VARCHAR')
-        )
-        await conn.execute(
-            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS resume_path VARCHAR')
-        )
-        await conn.execute(
-            text('ALTER TABLE task ADD COLUMN IF NOT EXISTS assignee_id INTEGER REFERENCES "user"(id)')
-        )
-        await conn.execute(
-            text("ALTER TABLE task ADD COLUMN IF NOT EXISTS acceptance_criteria VARCHAR")
-        )
-        await conn.execute(
-            text("ALTER TABLE task ADD COLUMN IF NOT EXISTS performer_requirements VARCHAR")
-        )

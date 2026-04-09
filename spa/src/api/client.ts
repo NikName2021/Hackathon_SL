@@ -53,7 +53,11 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         setAccessToken(null);
-        window.location.href = '/login';
+        // Avoid infinite redirect loops if already on login/register pages
+        const publicPages = ['/login', '/register'];
+        if (!publicPages.includes(window.location.pathname)) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }

@@ -2,7 +2,6 @@ services:
   postgres_pr:
     container_name: hackathon_mes_postgres
     image: postgres:17.6
-    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -12,11 +11,6 @@ services:
       - hackathon_SL_vol:/var/lib/postgresql/data
     ports:
       - "5450:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DATABASE:-hackathon_db}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - hackathon_SL_net
 
@@ -24,7 +18,6 @@ services:
     container_name: hackathon_mes_backend
     build:
       context: src
-    restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
@@ -39,8 +32,7 @@ services:
     volumes:
       - ./src/app/uploads:/app/uploads
     depends_on:
-      postgres_pr:
-        condition: service_healthy
+      - postgres_pr
     ports:
       - "8000:8000"
     networks:
@@ -50,11 +42,10 @@ services:
     container_name: hackathon_mes_frontend
     build:
       context: spa
-    restart: always
     ports:
       - "80:80"
     depends_on:
-      - hackathon_mes_backend
+      - postgres_pr
     networks:
       - hackathon_SL_net
 

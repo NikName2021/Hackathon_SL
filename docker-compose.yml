@@ -14,40 +14,40 @@ services:
     networks:
       - hackathon_SL_net
 
-#  hackathon_mes_backend:
-#    container_name: hackathon_mes_backend
-#    build:
-#      context: src
-#    environment:
-#      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-#      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-#      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-hackathon_db}
-#      - POSTGRES_HOST=postgres_pr
-#      - POSTGRES_PORT=5432
-#      - SECRET_KEY=${SECRET_KEY:-dev_secret_change_me}
-#      - HOST=0.0.0.0
-#      - PORT=8000
-#      - MEMOIZATION_FLAG=True
-#      - DEMO_SEED=${DEMO_SEED:-true}
-#    volumes:
-#      - ./src/app/uploads:/app/uploads
-#    depends_on:
-#      - postgres_pr
-#    ports:
-#      - "8000:8000"
-#    networks:
-#      - hackathon_SL_net
-#
-#  frontend:
-#    container_name: hackathon_mes_frontend
-#    build:
-#      context: spa
-#    ports:
-#      - "80:80"
-#    depends_on:
-#      - postgres_pr
-#    networks:
-#      - hackathon_SL_net
+  hackathon_mes_backend:
+    container_name: hackathon_mes_backend
+    build:
+      context: src
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-hackathon_db}
+      - POSTGRES_HOST=postgres_pr
+      - POSTGRES_PORT=5432
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_change_me}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MEMOIZATION_FLAG=True
+      - DEMO_SEED=${DEMO_SEED:-true}
+    volumes:
+      - ./src/app/uploads:/app/uploads
+    depends_on:
+      - postgres_pr
+    ports:
+      - "8000:8000"
+    networks:
+      - hackathon_SL_net
+
+  frontend:
+    container_name: hackathon_mes_frontend
+    build:
+      context: spa
+    ports:
+      - "80:80"
+    depends_on:
+      - postgres_pr
+    networks:
+      - hackathon_SL_net
 
 volumes:
   hackathon_SL_vol:

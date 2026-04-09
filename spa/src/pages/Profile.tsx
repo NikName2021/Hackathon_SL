@@ -30,6 +30,7 @@ import { skillApi } from '@/api/skill';
 import { gamificationApi } from '@/api/gamification';
 import type { GamificationStats, Achievement, Skill } from '@/types';
 import { SkillRadar } from '@/components/SkillRadar';
+import { resolveMediaUrl } from '@/utils/media';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -162,8 +163,6 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
   const isStudent = user.role === 'student';
 
   return (
@@ -201,7 +200,7 @@ export const Profile: React.FC = () => {
             <div className="w-32 h-32 rounded-3xl bg-white/20 backdrop-blur-md flex items-center justify-center overflow-hidden border-4 border-white/30 shadow-2xl relative transition-transform duration-300 group-hover/avatar:scale-105">
               {user.avatar_url ? (
                 <img 
-                  src={user.avatar_url.startsWith('http') ? user.avatar_url : `${baseUrl}${user.avatar_url}`} 
+                  src={resolveMediaUrl(user.avatar_url)} 
                   alt={user.full_name ?? 'User avatar'} 
                   className="w-full h-full object-cover"
                 />

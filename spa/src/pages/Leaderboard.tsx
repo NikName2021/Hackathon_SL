@@ -4,6 +4,7 @@ import { Trophy, Medal, Star, Search, TrendingUp } from 'lucide-react';
 import { gamificationApi } from '@/api/gamification';
 import type { LeaderboardUser } from '@/types';
 import { Card } from '@/components/ui/Card';
+import { resolveMediaUrl } from '@/utils/media';
 
 const Leaderboard: React.FC = () => {
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
@@ -81,7 +82,7 @@ const Leaderboard: React.FC = () => {
                 </div>
                 <div className="w-20 h-20 rounded-full mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center border-4 border-white shadow-xl overflow-hidden">
                    {topThree[1].avatar_url ? (
-                    <img src={topThree[1].avatar_url} alt="" className="w-full h-full object-cover" />
+                    <img src={resolveMediaUrl(topThree[1].avatar_url)} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-2xl font-bold text-blue-600">{topThree[1].full_name[0]}</span>
                   )}
@@ -109,7 +110,7 @@ const Leaderboard: React.FC = () => {
                 </div>
                 <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-gradient-to-br from-yellow-100 to-yellow-300 flex items-center justify-center border-4 border-white shadow-xl overflow-hidden">
                   {topThree[0].avatar_url ? (
-                    <img src={topThree[0].avatar_url} alt="" className="w-full h-full object-cover" />
+                    <img src={resolveMediaUrl(topThree[0].avatar_url)} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-3xl font-bold text-yellow-700">{topThree[0].full_name[0]}</span>
                   )}
@@ -146,7 +147,7 @@ const Leaderboard: React.FC = () => {
                 </div>
                 <div className="w-20 h-20 rounded-full mx-auto mb-4 bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center border-4 border-white shadow-xl overflow-hidden">
                   {topThree[2].avatar_url ? (
-                    <img src={topThree[2].avatar_url} alt="" className="w-full h-full object-cover" />
+                    <img src={resolveMediaUrl(topThree[2].avatar_url)} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-2xl font-bold text-orange-600">{topThree[2].full_name[0]}</span>
                   )}
@@ -195,7 +196,7 @@ const Leaderboard: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold overflow-hidden border-2 border-white shadow-sm">
                           {user.avatar_url ? (
-                            <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                            <img src={resolveMediaUrl(user.avatar_url)} alt="" className="w-full h-full object-cover" />
                           ) : (
                             user.full_name[0]
                           )}

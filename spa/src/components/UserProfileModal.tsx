@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import type { User, Skill } from '@/types';
 import { Button } from '@/components/ui/Button';
+import { resolveMediaUrl } from '@/utils/media';
 
 interface StudentProfileModalProps {
   isOpen: boolean;
@@ -26,8 +27,6 @@ export const UserProfileModal: React.FC<StudentProfileModalProps> = ({
   student: user 
 }) => {
   if (!user) return null;
-
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   return (
     <AnimatePresence>
@@ -63,7 +62,7 @@ export const UserProfileModal: React.FC<StudentProfileModalProps> = ({
                   <div className="w-full h-full rounded-xl bg-surface-50 dark:bg-surface-700 flex items-center justify-center overflow-hidden">
                     {user.avatar_url ? (
                       <img 
-                        src={user.avatar_url.startsWith('http') ? user.avatar_url : `${baseUrl}${user.avatar_url}`} 
+                        src={resolveMediaUrl(user.avatar_url)} 
                         alt={user.full_name} 
                         className="w-full h-full object-cover"
                       />
@@ -108,7 +107,7 @@ export const UserProfileModal: React.FC<StudentProfileModalProps> = ({
                       </h3>
                       <div className="flex gap-2">
                         <a 
-                          href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                          href={resolveMediaUrl(user.resume_path)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-all shadow-lg shadow-primary-500/20"
@@ -117,7 +116,7 @@ export const UserProfileModal: React.FC<StudentProfileModalProps> = ({
                           <span className="text-sm font-medium">Посмотреть</span>
                         </a>
                         <a 
-                          href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                          href={resolveMediaUrl(user.resume_path)}
                           download
                           className="inline-flex items-center gap-2 px-4 py-2 bg-surface-50 dark:bg-surface-800 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-surface-700 dark:text-surface-200 border border-surface-200 dark:border-surface-700 rounded-xl transition-all group"
                         >

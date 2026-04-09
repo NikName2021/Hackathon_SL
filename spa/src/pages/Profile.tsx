@@ -458,7 +458,7 @@ export const Profile: React.FC = () => {
                 {user.resume_path && (
                   <>
                     <a 
-                      href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                      href={resolveMediaUrl(user.resume_path)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
@@ -467,7 +467,7 @@ export const Profile: React.FC = () => {
                       <Eye className="w-5 h-5" />
                     </a>
                     <a 
-                      href={user.resume_path.startsWith('http') ? user.resume_path : `${baseUrl}${user.resume_path}`}
+                      href={resolveMediaUrl(user.resume_path)}
                       download
                       className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                       title="Скачать"

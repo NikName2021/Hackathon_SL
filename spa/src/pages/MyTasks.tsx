@@ -154,8 +154,8 @@ export const MyTasks: React.FC = () => {
           {tasks.map((task, index) => (
             <motion.div
               key={task.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ delay: index * 0.05 }}
             >
               <Card className="hover:border-primary-500/50 transition-all p-5 group">

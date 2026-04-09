@@ -63,8 +63,8 @@ export const StudentDashboard: React.FC = () => {
         {statCards.map((stat, idx) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ delay: idx * 0.1 }}
           >
             <Card className="hover:scale-[1.02] transition-transform cursor-pointer overflow-hidden border-none shadow-lg dark:bg-surface-800/50 backdrop-blur-md">

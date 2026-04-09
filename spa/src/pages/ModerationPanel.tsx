@@ -13,8 +13,7 @@ import {
   ChevronRight, 
   Tag, 
   Paperclip, 
-  Download,
-  AlertCircle
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

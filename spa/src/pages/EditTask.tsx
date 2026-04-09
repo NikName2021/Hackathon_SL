@@ -282,6 +282,7 @@ export const EditTask: React.FC = () => {
                   placeholder="Добавить навык..."
                   list="edit-skills"
                   value={newSkill}
+                  autoComplete="off"
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewSkill(e.target.value)}
                   onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                     if (e.key === 'Enter') {

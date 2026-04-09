@@ -26,8 +26,9 @@ import {
   Eye
 } from 'lucide-react';
 import { userApi } from '@/api/user';
+import { skillApi } from '@/api/skill';
 import { gamificationApi } from '@/api/gamification';
-import type { GamificationStats, Achievement } from '@/types';
+import type { GamificationStats, Achievement, Skill } from '@/types';
 import { SkillRadar } from '@/components/SkillRadar';
 
 export const Profile: React.FC = () => {
@@ -36,6 +37,7 @@ export const Profile: React.FC = () => {
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [newSkill, setNewSkill] = useState('');
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [isUploading, setIsUploading] = useState<'avatar' | 'resume' | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [stats, setStats] = useState<GamificationStats | null>(null);
@@ -47,8 +49,18 @@ export const Profile: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchGamificationData();
+      fetchAvailableSkills();
     }
   }, [user?.id]);
+
+  const fetchAvailableSkills = async () => {
+    try {
+      const skills = await skillApi.getAll();
+      setAvailableSkills(skills);
+    } catch (error) {
+      console.error('Error fetching available skills:', error);
+    }
+  };
 
   const fetchGamificationData = async () => {
     try {
@@ -396,7 +408,14 @@ export const Profile: React.FC = () => {
                   value={newSkill}
                   onChange={(e) => setNewSkill(e.target.value)}
                   placeholder="Python, UI..."
+                  list="skills-list"
+                  autoComplete="off"
                 />
+                <datalist id="skills-list">
+                  {availableSkills.map(skill => (
+                    <option key={skill.id} value={skill.name} />
+                  ))}
+                </datalist>
               </div>
               <Button type="submit" variant="primary" className="px-4 rounded-2xl">
                 <Plus className="w-5 h-5" />

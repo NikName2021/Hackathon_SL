@@ -17,6 +17,13 @@ POSTGRES_DATABASE={random_word(12)}
 SECRET_KEY={secrets.token_hex(32)}
 DEMO_SEED=true
 
+SMTP_USER=test@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+MAIL_FROM=test@gmail.com
+FRONTEND_URL=http://localhost:3000
+
 # Frontend dev proxy target (host only, without /api)
 VITE_API_URL=http://localhost:8000
 

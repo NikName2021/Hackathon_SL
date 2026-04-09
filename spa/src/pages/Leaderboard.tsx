@@ -177,51 +177,59 @@ const Leaderboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100 dark:divide-white/5">
-              {remainingUsers.map((user) => (
-                <motion.tr 
-                  key={user.id}
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  className="hover:bg-white/60 dark:hover:bg-white/5 transition-colors group"
-                >
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-100 dark:bg-white/10 text-sm font-bold">
-                      {user.rank}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold overflow-hidden border-2 border-white shadow-sm">
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          user.full_name[0]
-                        )}
+              {remainingUsers.length > 0 ? (
+                remainingUsers.map((user) => (
+                  <motion.tr 
+                    key={user.id}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    className="hover:bg-white/60 dark:hover:bg-white/5 transition-colors group"
+                  >
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface-100 dark:bg-white/10 text-sm font-bold">
+                        {user.rank}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold overflow-hidden border-2 border-white shadow-sm">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            user.full_name[0]
+                          )}
+                        </div>
+                        <span className="font-semibold">{user.full_name}</span>
                       </div>
-                      <span className="font-semibold">{user.full_name}</span>
-                    </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {user.skills.slice(0, 3).map((skill: string) => (
+                          <span key={skill} className="px-2 py-0.5 bg-surface-100 dark:bg-white/5 text-surface-600 dark:text-surface-400 rounded-md text-[10px]">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 font-bold text-primary-600">
+                        <Star className="w-3 h-3 fill-primary-500 border-none" />
+                        {user.reputation.toFixed(1)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-surface-500">
+                      {user.points} KP
+                    </td>
+                  </motion.tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-surface-400 italic">
+                    Больше студентов в списке пока нет
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {user.skills.slice(0, 3).map((skill: string) => (
-                        <span key={skill} className="px-2 py-0.5 bg-surface-100 dark:bg-white/5 text-surface-600 dark:text-surface-400 rounded-md text-[10px]">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 font-bold text-primary-600">
-                      <Star className="w-3 h-3 fill-primary-500 border-none" />
-                      {user.reputation.toFixed(1)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium text-surface-500">
-                    {user.points} KP
-                  </td>
-                </motion.tr>
-              ))}
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

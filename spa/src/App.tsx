@@ -39,7 +39,15 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 import { NotificationProvider } from '@/context/NotificationContext';
 
 function App() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-surface-50 to-primary-50 dark:from-surface-900 dark:to-primary-900">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin shadow-lg"></div>
+      </div>
+    );
+  }
 
   return (
     <NotificationProvider>

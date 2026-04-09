@@ -52,7 +52,8 @@ async def get_user_stats(
         "progress_percentage": level_info[2],
         "total_points": user.points,
         "rank": rank,
-        "achievements": achievement_list
+        "achievements": achievement_list,
+        "skill_distribution": await GamificationService.get_skill_distribution(current_user.id, db)
     }
 
 @router.get("/achievements", response_model=List[AchievementResponse])

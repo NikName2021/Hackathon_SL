@@ -48,8 +48,18 @@ export const RecommendationSection: React.FC = () => {
   if (isLoading && offset === 0) {
     return (
       <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-2 animate-pulse">
+          <div className="w-8 h-8 bg-surface-200 dark:bg-white/10 rounded-lg"></div>
+          <div className="space-y-2">
+            <div className="h-4 w-32 bg-surface-200 dark:bg-white/10 rounded"></div>
+            <div className="h-3 w-48 bg-surface-100 dark:bg-white/5 rounded"></div>
+          </div>
+        </div>
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-xl" />
+          <div 
+            key={i} 
+            className="h-[120px] bg-surface-50 dark:bg-white/5 rounded-3xl border border-surface-100 dark:border-white/5 animate-pulse shadow-sm" 
+          />
         ))}
       </div>
     );
@@ -58,62 +68,68 @@ export const RecommendationSection: React.FC = () => {
   if (recommendations.length === 0) return null;
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-6"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-yellow-100 rounded-lg">
-            <Zap className="w-5 h-5 text-yellow-600" />
+          <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+            <Zap className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900 leading-tight">Подходящие вам задачи</h3>
-            <p className="text-sm text-gray-500">На основе ваших навыков и опыта</p>
+            <h3 className="text-lg font-bold text-surface-900 dark:text-white leading-tight">Подходящие вам задачи</h3>
+            <p className="text-sm text-surface-500">На основе ваших навыков и опыта</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-4">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="popLayout" initial={false}>
           {recommendations.map((task, index) => (
             <motion.div
               key={task.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ delay: index * 0.05 }}
             >
               <Link to={`/tasks?taskId=${task.id}`}>
-                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer group border-l-4 border-l-blue-500 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 rotate-12 group-hover:scale-110 transition-transform">
-                    <Target className="w-16 h-16 text-blue-600" />
+                <Card className="p-4 hover:shadow-xl hover:scale-[1.01] transition-all cursor-pointer group border-l-4 border-l-primary-500 relative overflow-hidden dark:bg-surface-800/50 backdrop-blur-sm">
+                  <div className="absolute top-0 right-0 p-2 opacity-[0.03] dark:opacity-[0.05] scale-150 rotate-12 group-hover:scale-110 transition-transform">
+                    <Target className="w-16 h-16 text-primary-600" />
                   </div>
                   
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                        <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 rounded-md">
                           {task.category}
                         </span>
                         {task.match_score >= 20 && (
-                          <span className="text-xs font-bold text-green-600 flex items-center gap-1">
-                            <Award className="w-3 h-3" /> Топ совпадение
+                          <span className="text-[10px] font-bold text-green-600 dark:text-green-400 flex items-center gap-1 neon-glow-green bg-green-50 dark:bg-green-900/40 px-2 py-0.5 rounded-full">
+                            <Award className="w-3 h-3 pulse-indicator" /> 
+                            <span className="glitch-text" data-text="ТОП СОВПАДЕНИЕ">ТОП СОВПАДЕНИЕ</span>
                           </span>
                         )}
                       </div>
-                      <h4 className="font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                      <h4 className="font-bold text-surface-900 dark:text-white mb-1 group-hover:text-primary-600 transition-colors">
                         {task.title}
                       </h4>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 text-[11px] text-surface-500 dark:text-surface-400">
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" /> {task.owner_name}
                         </span>
-                        <span className="flex items-center gap-1 font-medium text-blue-600">
-                          <Award className="w-3 h-3" /> {task.points_reward} баллов
+                        <span className="flex items-center gap-1 font-bold text-primary-600 dark:text-primary-400">
+                          <Award className="w-3 h-3" /> {task.points_reward} KP
                         </span>
                       </div>
                       
                       {task.skills.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-3">
                           {task.skills.map(skill => (
-                            <span key={skill} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                            <span key={skill} className="text-[9px] font-medium px-1.5 py-0.5 bg-surface-100 dark:bg-white/5 text-surface-600 dark:text-surface-400 rounded-md border border-surface-200/50 dark:border-white/5">
                               {skill}
                             </span>
                           ))}
@@ -121,11 +137,11 @@ export const RecommendationSection: React.FC = () => {
                       )}
                     </div>
                     
-                    <div className="flex flex-col items-end gap-2">
-                       <div className="text-sm font-bold text-blue-600 bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                       <div className="text-xs font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 w-9 h-9 rounded-full flex items-center justify-center border-2 border-white dark:border-surface-700 shadow-sm">
                           {task.match_score}
                        </div>
-                       <div className="p-1.5 bg-gray-50 text-gray-400 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all">
+                       <div className="p-1.5 bg-surface-50 dark:bg-white/5 text-surface-400 rounded-full group-hover:bg-primary-600 group-hover:text-white transition-all">
                           <ChevronRight className="w-4 h-4" />
                        </div>
                     </div>
@@ -141,11 +157,11 @@ export const RecommendationSection: React.FC = () => {
         <Button 
           variant="outline" 
           onClick={handleLoadMore}
-          className="w-full py-3 text-gray-600 hover:text-blue-600"
+          className="w-full py-2.5 text-surface-600 dark:text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-xl"
         >
           Показать еще варианты
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 };

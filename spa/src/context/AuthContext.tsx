@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import type { User } from '@/types';
 import { apiClient, setAccessToken } from '@/api/client';
 
@@ -12,28 +12,38 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isLoading: true,
+  });
 
   const refreshUser = async () => {
     try {
-      setIsLoading(true);
+      setState(prev => ({ ...prev, isLoading: true }));
       const response = await apiClient.get<User>('/auth/getIdentity');
-      setUser(response.data);
+      setState({ user: response.data, isLoading: false });
     } catch (error) {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
+      setState({ user: null, isLoading: false });
     }
   };
 
+  const initialized = useRef(false);
+
   useEffect(() => {
-    refreshUser();
+    if (!initialized.current) {
+      initialized.current = true;
+      refreshUser();
+    }
   }, []);
 
   const login = (userData: User) => {
-    setUser(userData);
+    setState({ user: userData, isLoading: false });
   };
 
   const logout = async () => {
@@ -43,11 +53,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error(e);
     }
     setAccessToken(null);
-    setUser(null);
+    setState({ user: null, isLoading: false });
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ 
+      user: state.user, 
+      isLoading: state.isLoading, 
+      login, 
+      logout, 
+      refreshUser 
+    }}>
       {children}
     </AuthContext.Provider>
   );

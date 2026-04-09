@@ -27,6 +27,7 @@ import {
 import { userApi } from '@/api/user';
 import { gamificationApi } from '@/api/gamification';
 import type { GamificationStats, Achievement } from '@/types';
+import { SkillRadar } from '@/components/SkillRadar';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -360,6 +361,22 @@ export const Profile: React.FC = () => {
 
         {/* Right Aspect: Skills & Document */}
         <div className="w-full lg:w-1/3 space-y-8">
+          {stats?.skill_distribution && stats.skill_distribution.length > 0 && (
+            <Card className="p-6 overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-5">
+                <Target className="w-24 h-24" />
+              </div>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                Радар компетенций
+              </h3>
+              <SkillRadar data={stats.skill_distribution} size={250} />
+              <p className="text-[10px] text-center text-surface-400 mt-4 italic">
+                График обновляется на основе ваших подтвержденных навыков и выполненных задач
+              </p>
+            </Card>
+          )}
+
           <Card className="p-8 space-y-6 bg-gradient-to-br from-white to-surface-50 dark:from-surface-900 dark:to-surface-800/50">
             <h3 className="text-xl font-bold flex items-center gap-2">
               <Star className="w-6 h-6 text-purple-500" />

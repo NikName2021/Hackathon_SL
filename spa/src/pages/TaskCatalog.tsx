@@ -192,15 +192,15 @@ export const TaskCatalog: React.FC = () => {
               id={`task-${task.id}`}
             >
               <Card
-                className={`flex flex-col h-full hover:shadow-2xl transition-all duration-300 border ${
+                className={`flex flex-col h-full hover:shadow-2xl transition-all duration-300 border relative ${
                   highlightedTaskId === String(task.id)
-                    ? 'ring-2 ring-primary-500 shadow-xl shadow-primary-500/10 border-primary-500/50 scale-[1.02]'
+                    ? 'ring-2 ring-primary-500 shadow-xl shadow-primary-500/10 border-primary-500/50 scale-[1.02] neon-glow-primary'
                     : 'border-surface-200/50 dark:border-white/5'
                 }`}
               >
                 {highlightedTaskId === String(task.id) && (
-                  <div className="absolute -top-3 left-4 bg-primary-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg shadow-primary-600/20 animate-bounce">
-                    РЕКОМЕНДОВАНО
+                  <div className="absolute -top-3 left-4 bg-primary-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg shadow-primary-600/20 animate-bounce z-10">
+                    <span className="glitch-text" data-text="РЕКОМЕНДОВАНО">РЕКОМЕНДОВАНО</span>
                   </div>
                 )}
 

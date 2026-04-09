@@ -31,33 +31,64 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh
+// Variables to handle atomic token refresh
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+// Response interceptor to handle token refresh with atomic locking
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // If error is 401 (Unauthorized) and we haven't retried yet
+    // If error is 401 (Unauthorized) and we haven't retried this request yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
-        const refreshResponse = await axios.post('/api/v1/auth/token/refresh', {}, { withCredentials: true });
-        const newToken = refreshResponse.data?.access_token;
-        if (newToken) {
-          setAccessToken(newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        // If an update is already in progress, wait for it
+        if (isRefreshing) {
+          const newToken = await refreshPromise;
+          if (newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return apiClient(originalRequest);
+          }
         }
+
+        // Start new refresh process
+        isRefreshing = true;
+        refreshPromise = (async () => {
+          try {
+            const refreshResponse = await axios.post('/api/v1/auth/token/refresh', {}, { withCredentials: true });
+            const newToken = refreshResponse.data?.access_token;
+            if (newToken) {
+              setAccessToken(newToken);
+              return newToken;
+            }
+            return null;
+          } catch (e) {
+            return null;
+          } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+          }
+        })();
+
+        const newToken = await refreshPromise;
         
-        // Retry the original request
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        setAccessToken(null);
-        // Avoid infinite redirect loops if already on login/register pages
-        const publicPages = ['/login', '/register'];
-        if (!publicPages.includes(window.location.pathname)) {
-          window.location.href = '/login';
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return apiClient(originalRequest);
+        } else {
+          // Refresh failed definitely
+          setAccessToken(null);
+          const publicPages = ['/login', '/register'];
+          if (!publicPages.includes(window.location.pathname)) {
+            window.location.href = '/login';
+          }
+          return Promise.reject(error);
         }
+      } catch (refreshError) {
         return Promise.reject(refreshError);
       }
     }

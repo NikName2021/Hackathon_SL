@@ -58,6 +58,7 @@ export const MainLayout: React.FC = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={['/', '/tasks', '/admin'].includes(item.path)}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium',

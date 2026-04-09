@@ -86,18 +86,34 @@ async def seed_demo_data(session: AsyncSession):
         )
         session.add(employee)
 
-    student = users.get("student@demo.local")
-    if not student:
-        student = User(
-            email="student@demo.local",
-            hashed_password=default_password,
-            full_name="Demo Student",
-            role=Role.STUDENT,
-            points=120,
-            reputation=3.5,
-            is_active=True,
-        )
-        session.add(student)
+    # Add several demo students to populate the leaderboard
+    demo_students = [
+        ("student@demo.local", "Demo Student", 120, 3.5),
+        ("ivanov@demo.local", "Иван Иванов", 450, 4.8),
+        ("petrov@demo.local", "Петр Петров", 380, 4.2),
+        ("sidorov@demo.local", "Сидор Сидоров", 290, 3.9),
+        ("kuznetsov@demo.local", "Алексей Кузнецов", 210, 3.1),
+        ("volkov@demo.local", "Дмитрий Волков", 180, 2.8),
+        ("lebedeva@demo.local", "Ольга Лебедева", 560, 4.9),
+        ("morozova@demo.local", "Анна Морозова", 320, 4.5),
+        ("smirnov@demo.local", "Николай Смирнов", 90, 2.1),
+    ]
+
+    for email, name, points, reputation in demo_students:
+        s = users.get(email)
+        if not s:
+            s = User(
+                email=email,
+                hashed_password=default_password,
+                full_name=name,
+                role=Role.STUDENT,
+                points=points,
+                reputation=reputation,
+                is_active=True,
+            )
+            session.add(s)
+            if email == "student@demo.local":
+                student = s  # Keep reference for tasks
 
     await session.flush()
 

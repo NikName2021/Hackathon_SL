@@ -119,3 +119,40 @@ class GamificationService:
             await GamificationService.award_achievement(user_id, "Мастер задач", session)
         elif completed_tasks_count >= 1:
             await GamificationService.award_achievement(user_id, "Первопроходец", session)
+
+    @staticmethod
+    async def get_skill_distribution(user_id: int, session: AsyncSession):
+        """Calculate skill distribution for radar chart."""
+        stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(selectinload(User.skills))
+        )
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return []
+            
+        categories = {
+            "Разработка": ["python", "fastapi", "sql", "api", "backend", "frontend", "react", "html", "css", "js", "javascript"],
+            "Дизайн/UX": ["дизайн", "design", "figma", "ui", "ux", "верстка"],
+            "Аналитика": ["анализ", "data", "analytics", "sql", "excel", "research", "исследования"],
+            "Менеджмент": ["менеджмент", "management", "управление", "лидерство", "leadership", "soft skills"],
+            "Инфраструктура": ["docker", "git", "linux", "devops", "deploy"]
+        }
+        
+        stats = {cat: 0 for cat in categories}
+        user_skill_names = [s.name.lower() for s in user.skills]
+        
+        for cat_name, keywords in categories.items():
+            for skill in user_skill_names:
+                if any(kw in skill for kw in keywords):
+                    stats[cat_name] += 20 # Base weight per skill match
+            
+            # Limit to 100
+            if stats[cat_name] > 100:
+                stats[cat_name] = 100
+                
+        # Format for frontend radar chart
+        return [{"subject": cat, "A": value, "fullMark": 100} for cat, value in stats.items()]

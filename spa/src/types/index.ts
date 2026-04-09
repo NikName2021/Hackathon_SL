@@ -109,6 +109,7 @@ export interface GamificationStats {
   total_points: number;
   rank: number;
   achievements: Achievement[];
+  skill_distribution: Array<{ subject: string; A: number; fullMark: number }>;
 }
 
 export interface AdminStats {

@@ -77,7 +77,7 @@ export const MainLayout: React.FC = () => {
         <div className="p-4 border-t border-white/20 dark:border-white/10">
           <NavLink
             to="/profile"
-            className="w-full text-left px-4 py-3 bg-white/40 dark:bg-white/5 rounded-xl mb-4 transition-colors hover:bg-white/60 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+            className="block w-full overflow-hidden border border-transparent text-left px-4 py-3 bg-white/40 dark:bg-white/5 rounded-xl mb-4 transition-colors hover:bg-white/60 dark:hover:bg-white/10 no-underline outline-none focus:outline-none focus-visible:outline-none"
             aria-label="Открыть профиль"
           >
             <p className="font-semibold text-sm truncate">{user?.full_name}</p>

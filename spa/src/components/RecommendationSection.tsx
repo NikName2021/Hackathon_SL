@@ -45,25 +45,7 @@ export const RecommendationSection: React.FC = () => {
     fetchRecommendations(nextOffset);
   };
 
-  if (isLoading && offset === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2 animate-pulse">
-          <div className="w-8 h-8 bg-surface-200 dark:bg-white/10 rounded-lg"></div>
-          <div className="space-y-2">
-            <div className="h-4 w-32 bg-surface-200 dark:bg-white/10 rounded"></div>
-            <div className="h-3 w-48 bg-surface-100 dark:bg-white/5 rounded"></div>
-          </div>
-        </div>
-        {[1, 2, 3].map(i => (
-          <div 
-            key={i} 
-            className="h-[120px] bg-surface-50 dark:bg-white/5 rounded-3xl border border-surface-100 dark:border-white/5 animate-pulse shadow-sm" 
-          />
-        ))}
-      </div>
-    );
-  }
+  if (isLoading && offset === 0) return null;
 
   if (recommendations.length === 0) return null;
 

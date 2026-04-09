@@ -18,9 +18,11 @@ from repositories.task import (
 )
 from repositories.user import UserRepository
 from repositories.team import TeamRepository
-from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, TaskReview, TaskUpdate
+from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, TaskReview, TaskUpdate, SmartBadge
 from schemas.team import TeamCreate
 from services.gamification_service import GamificationService
+from sqlalchemy import select, func
+from database.all_models import Task, TaskSubmission, TaskApplication
 
 
 class TaskService:
@@ -129,7 +131,64 @@ class TaskService:
 
     @staticmethod
     async def get_incoming_applications(user_id: int, session: AsyncSession):
-        return await ApplicationRepository.get_pending_for_owner(user_id, session)
+        apps = await ApplicationRepository.get_pending_for_owner(user_id, session)
+        if not apps:
+            return []
+            
+        # Enrich apps with smart badges
+        for app in apps:
+            badges = []
+            score = 0
+            
+            # 1. Category Top
+            if app.task.category_id:
+                cat_tasks_stmt = select(func.count(Task.id)).where(
+                    Task.assignee_id == app.student_id,
+                    Task.category_id == app.task.category_id,
+                    Task.status == TaskStatus.COMPLETED
+                )
+                cat_count = (await session.execute(cat_tasks_stmt)).scalar() or 0
+                if cat_count >= 1:
+                    badges.append(SmartBadge(
+                        type="category_top",
+                        label="Топ в категории",
+                        description=f"Выполнил {cat_count} задач в этой категории"
+                    ))
+                    score += cat_count * 2
+            
+            # 2. Department Veteran
+            owner_tasks_stmt = select(func.count(Task.id)).where(
+                Task.assignee_id == app.student_id,
+                Task.owner_id == user_id,
+                Task.status == TaskStatus.COMPLETED
+            )
+            owner_count = (await session.execute(owner_tasks_stmt)).scalar() or 0
+            if owner_count >= 1:
+                badges.append(SmartBadge(
+                    type="department_veteran",
+                    label="Старожил кафедры",
+                    description=f"Ранее выполнил {owner_count} задач для вас"
+                ))
+                score += owner_count * 3
+            
+            # 3. Speedster (by reputation for now as proxy)
+            if app.student.reputation >= 20:
+                badges.append(SmartBadge(
+                    type="speedster",
+                    label="Быстрый старт",
+                    description="Имеет высокую репутацию и проверенную скорость"
+                ))
+                score += app.student.reputation / 10
+            
+            app.smart_badges = badges
+            app.match_score = score # Transient field for sorting
+            
+        # Flag Top 3 as Best Match
+        sorted_apps = sorted(apps, key=lambda x: getattr(x, 'match_score', 0), reverse=True)
+        for i, app in enumerate(sorted_apps):
+            app.is_best_match = (i < 3 and getattr(app, 'match_score', 0) > 0)
+            
+        return apps
 
     @staticmethod
     async def get_tasks_for_moderation(session: AsyncSession):

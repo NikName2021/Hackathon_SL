@@ -49,14 +49,24 @@ export interface Category {
   description?: string;
 }
 
+export interface SmartBadge {
+  type: 'category_top' | 'department_veteran' | 'speedster';
+  label: string;
+  description: string;
+}
+
 export interface TaskApplication {
   id: number;
   task_id: number;
   student_id: number;
+  student: User;
+  task: Task;
   message?: string;
   status: ApplicationStatus;
-  applied_at: string;
+  created_at: string;
   team?: TaskTeam;
+  smart_badges: SmartBadge[];
+  is_best_match: bool;
 }
 
 export interface TaskAttachment {

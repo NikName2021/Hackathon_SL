@@ -53,10 +53,10 @@ async def seed_demo_data(session: AsyncSession):
         return
 
     demo_emails = [
-        "admin@demo.local", "employee@demo.local", "student@demo.local",
-        "ivanov@demo.local", "petrov@demo.local", "sidorov@demo.local",
-        "kuznetsov@demo.local", "volkov@demo.local", "lebedeva@demo.local",
-        "morozova@demo.local", "smirnov@demo.local"
+        "admin@demo.ru", "employee@demo.ru", "student@demo.ru",
+        "ivanov@demo.ru", "petrov@demo.ru", "sidorov@demo.ru",
+        "kuznetsov@demo.ru", "volkov@demo.ru", "lebedeva@demo.ru",
+        "morozova@demo.ru", "smirnov@demo.ru"
     ]
     
     users_stmt = select(User).where(User.email.in_(demo_emails))
@@ -65,43 +65,45 @@ async def seed_demo_data(session: AsyncSession):
 
     default_password = pwd_context.hash("demo12345")
 
-    admin = users.get("admin@demo.local")
+    admin = users.get("admin@demo.ru")
     if not admin:
         admin = User(
-            email="admin@demo.local",
+            email="admin@demo.ru",
             hashed_password=default_password,
             full_name="Demo Admin",
             role=Role.ADMIN,
             points=0,
             reputation=0.0,
             is_active=True,
+            is_verified=True,
         )
         session.add(admin)
 
-    employee = users.get("employee@demo.local")
+    employee = users.get("employee@demo.ru")
     if not employee:
         employee = User(
-            email="employee@demo.local",
+            email="employee@demo.ru",
             hashed_password=default_password,
             full_name="Demo Employee",
             role=Role.EMPLOYEE,
             points=50,
             reputation=1.0,
             is_active=True,
+            is_verified=True,
         )
         session.add(employee)
 
     # Add several demo students to populate the leaderboard
     demo_students = [
-        ("student@demo.local", "Demo Student", 120, 3.5),
-        ("ivanov@demo.local", "Иван Иванов", 450, 4.8),
-        ("petrov@demo.local", "Петр Петров", 380, 4.2),
-        ("sidorov@demo.local", "Сидор Сидоров", 290, 3.9),
-        ("kuznetsov@demo.local", "Алексей Кузнецов", 210, 3.1),
-        ("volkov@demo.local", "Дмитрий Волков", 180, 2.8),
-        ("lebedeva@demo.local", "Ольга Лебедева", 560, 4.9),
-        ("morozova@demo.local", "Анна Морозова", 320, 4.5),
-        ("smirnov@demo.local", "Николай Смирнов", 90, 2.1),
+        ("student@demo.ru", "Demo Student", 120, 3.5),
+        ("ivanov@demo.ru", "Иван Иванов", 450, 4.8),
+        ("petrov@demo.ru", "Петр Петров", 380, 4.2),
+        ("sidorov@demo.ru", "Сидор Сидоров", 290, 3.9),
+        ("kuznetsov@demo.ru", "Алексей Кузнецов", 210, 3.1),
+        ("volkov@demo.ru", "Дмитрий Волков", 180, 2.8),
+        ("lebedeva@demo.ru", "Ольга Лебедева", 560, 4.9),
+        ("morozova@demo.ru", "Анна Морозова", 320, 4.5),
+        ("smirnov@demo.ru", "Николай Смирнов", 90, 2.1),
     ]
 
     for email, name, points, reputation in demo_students:
@@ -115,9 +117,10 @@ async def seed_demo_data(session: AsyncSession):
                 points=points,
                 reputation=reputation,
                 is_active=True,
+                is_verified=True,
             )
             session.add(s)
-            if email == "student@demo.local":
+            if email == "student@demo.ru":
                 student = s  # Keep reference for tasks
 
     await session.flush()

@@ -99,6 +99,12 @@ class ApplicationCreate(BaseModel):
     team_id: Optional[int] = None
 
 
+class SmartBadge(BaseModel):
+    type: str  # 'category_top', 'department_veteran', 'speedster'
+    label: str
+    description: str
+
+
 class ApplicationResponse(BaseModel):
     id: int
     task_id: int
@@ -109,6 +115,8 @@ class ApplicationResponse(BaseModel):
     message: str | None
     created_at: datetime
     team: Optional[TeamResponse] = None
+    smart_badges: List[SmartBadge] = []
+    is_best_match: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 

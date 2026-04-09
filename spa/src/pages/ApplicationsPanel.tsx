@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
 import type { User, Task, TaskTeam } from '@/types';
-import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle, ExternalLink, Users, Award } from 'lucide-react';
+import { UserCheck, UserX, UserPlus, Clock, MessageSquare, CheckCircle, ExternalLink, Users, Award, Trophy, Zap, Sparkles, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserProfileModal } from '@/components/UserProfileModal';
 
@@ -16,6 +16,8 @@ interface Application {
   status: string;
   created_at: string;
   team?: TaskTeam;
+  smart_badges?: { type: string; label: string; description: string }[];
+  is_best_match?: boolean;
 }
 
 export const ApplicationsPanel: React.FC = () => {
@@ -107,8 +109,19 @@ export const ApplicationsPanel: React.FC = () => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
+                className="relative group"
               >
-                <Card className={`overflow-hidden border-l-4 ${app.team ? 'border-l-purple-500' : 'border-l-primary-500'}`}>
+                {app.is_best_match && (
+                  <div className="absolute -top-3 -right-3 z-10 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-white dark:border-surface-900 flex items-center gap-1 animate-bounce">
+                    <Star className="w-3 h-3 fill-current" />
+                    ЛУЧШИЙ МЭТЧ
+                  </div>
+                )}
+                <Card className={`overflow-hidden transition-all duration-500 ${
+                  app.is_best_match 
+                    ? 'ring-2 ring-yellow-400 border-yellow-100 shadow-xl shadow-yellow-500/10 scale-[1.02]' 
+                    : 'border-l-4 ' + (app.team ? 'border-l-purple-500' : 'border-l-primary-500')
+                }`}>
                   <div className="p-6">
                     <div className="flex flex-col md:flex-row justify-between gap-6">
                       <div className="space-y-4 flex-1">
@@ -151,6 +164,30 @@ export const ApplicationsPanel: React.FC = () => {
                                 {new Date(app.created_at).toLocaleDateString()}
                               </span>
                             </div>
+
+                            {/* Smart Badges */}
+                            {app.smart_badges && app.smart_badges.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {app.smart_badges.map((badge) => (
+                                  <div 
+                                    key={badge.type}
+                                    title={badge.description}
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm transition-all hover:scale-105 cursor-help ${
+                                      badge.type === 'category_top' 
+                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                        : badge.type === 'department_veteran'
+                                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                        : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                    }`}
+                                  >
+                                    {badge.type === 'category_top' && <Trophy className="w-3 h-3" />}
+                                    {badge.type === 'department_veteran' && <Sparkles className="w-3 h-3" />}
+                                    {badge.type === 'speedster' && <Zap className="w-3 h-3" />}
+                                    {badge.label}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
 

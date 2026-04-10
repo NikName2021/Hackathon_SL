@@ -51,7 +51,7 @@ export const MainLayout: React.FC = () => {
       <aside className="w-64 bg-white/60 dark:bg-black/40 backdrop-blur-xl border-r border-white/20 dark:border-white/10 flex flex-col transition-all">
         <div className="p-6 border-b border-white/20 dark:border-white/10">
           <div className="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-purple-500">
-            TaskBoard.
+            TalentHub
           </div>
         </div>
 

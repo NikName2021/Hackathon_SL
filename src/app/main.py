@@ -56,6 +56,7 @@ def get_application() -> FastAPI:
     # Ensure uploads directory exists
     os.makedirs("uploads/avatars", exist_ok=True)
     os.makedirs("uploads/resumes", exist_ok=True)
+    os.makedirs("protected_storage/chat", exist_ok=True)
     
     # Mount static files
     application.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

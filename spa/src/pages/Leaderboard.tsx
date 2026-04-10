@@ -50,7 +50,7 @@ const Leaderboard: React.FC = () => {
             <Trophy className="text-yellow-500 w-8 h-8" />
             Рейтинг Студентов
           </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">Лучшие из лучших на платформе TaskBoard</p>
+          <p className="text-surface-500 dark:text-surface-400 mt-1">Лучшие из лучших на платформе TalentHub</p>
         </div>
 
         <div className="relative w-full md:w-64">

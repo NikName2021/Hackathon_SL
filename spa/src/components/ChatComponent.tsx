@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {apiClient} from '@/api/client';
+import {apiClient, getAccessToken} from '@/api/client';
 import type {User} from '@/types';
 import {Download, FileText, Loader2, Paperclip, Send, X, ShieldCheck, Lock, Info} from 'lucide-react';
 import {Button} from './ui/Button';
@@ -16,6 +16,7 @@ interface Message {
   file_name?: string;
   file_type?: string;
   is_secure_file?: boolean;
+  is_encrypted?: boolean;
   created_at: string;
 }
 
@@ -214,6 +215,11 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({ taskId, taskTitle,
                               : 'bg-surface-50 dark:bg-surface-800/80 text-surface-900 dark:text-white rounded-tl-none border border-surface-100 dark:border-surface-700 hover:border-surface-200 dark:hover:border-surface-600'
                           }`}
                         >
+                          <div className="flex items-center gap-1.5 mb-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <Lock className="w-3 h-3" />
+                            <span className="text-[8px] font-black uppercase tracking-widest">Encrypted</span>
+                          </div>
+
                           {msg.file_url && (
                             <div className="mb-3">
                               {msg.is_secure_file && (
@@ -225,20 +231,20 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({ taskId, taskTitle,
                               
                               {msg.file_type === 'image' ? (
                                 <a 
-                                  href={msg.file_url.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}`} 
+                                  href={msg.file_url?.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}?token=${getAccessToken()}`} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="block rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 shadow-inner"
                                 >
                                   <img 
-                                    src={msg.file_url.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}`} 
+                                    src={msg.file_url?.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}?token=${getAccessToken()}`} 
                                     alt={msg.file_name}
                                     className="max-w-full h-auto max-h-72 object-cover hover:scale-105 transition-transform duration-500" 
                                   />
                                 </a>
                               ) : (
                                 <a 
-                                  href={msg.file_url.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}`} 
+                                  href={msg.file_url?.startsWith('http') ? msg.file_url : `${baseUrl}${msg.file_url}?token=${getAccessToken()}`} 
                                   download 
                                   className={`flex items-center gap-4 p-4 rounded-2xl border transition-colors ${
                                     isMe 

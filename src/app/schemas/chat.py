@@ -15,6 +15,7 @@ class ChatMessageResponse(BaseModel):
     file_name: str | None = None
     file_type: str | None = None
     is_secure_file: bool = False
+    is_encrypted: bool = True
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

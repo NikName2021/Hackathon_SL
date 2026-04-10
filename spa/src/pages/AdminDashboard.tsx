@@ -9,7 +9,6 @@ import {
   AlertCircle,
   BarChart3,
   Briefcase,
-  Plus,
   Settings,
   ShieldCheck,
   Users,

@@ -25,7 +25,6 @@ import { SubmissionModal } from '@/components/SubmissionModal';
 import { ChatComponent } from '@/components/ChatComponent';
 import { useAuth } from '@/context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import type { TaskTeam } from '@/types';
 
 export const MyTasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);

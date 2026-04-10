@@ -1,9 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {apiClient} from '@/api/client';
 import type {User} from '@/types';
-import {Download, FileText, Loader2, Paperclip, Send, User as UserIcon, X, ShieldCheck, Lock, Info} from 'lucide-react';
+import {Download, FileText, Loader2, Paperclip, Send, X, ShieldCheck, Lock, Info} from 'lucide-react';
 import {Button} from './ui/Button';
-import {Card} from './ui/Card';
 import {motion, AnimatePresence} from 'framer-motion';
 import {useAuth} from '@/context/AuthContext';
 

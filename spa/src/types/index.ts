@@ -66,7 +66,7 @@ export interface TaskApplication {
   created_at: string;
   team?: TaskTeam;
   smart_badges: SmartBadge[];
-  is_best_match: bool;
+  is_best_match: boolean;
 }
 
 export interface TaskAttachment {

@@ -133,6 +133,7 @@ async def get_dashboard_stats(
 
 @router.get("/activity", response_model=List[ActivityResponse])
 async def get_activity_feed(
+    limit: int = 15,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(async_get_db)
 ):
@@ -141,7 +142,7 @@ async def get_activity_feed(
     Для сотрудника: новые отклики, сданные работы.
     Для студента: одобренные отклики, принятые задачи.
     """
-    return await ActivityLogRepository.get_recent_for_user(db, current_user.id)
+    return await ActivityLogRepository.get_recent_for_user(db, current_user.id, limit=limit)
 
 
 @router.post("/{task_id}/approve", response_model=TaskResponse)

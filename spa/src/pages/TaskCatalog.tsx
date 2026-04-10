@@ -9,6 +9,7 @@ import { apiClient } from '@/api/client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ApplicationModal } from '@/components/ApplicationModal';
+import { TaskDetailsModal } from '@/components/TaskDetailsModal';
 import { UserProfileModal } from '@/components/UserProfileModal';
 import { useNotification } from '@/context/NotificationContext';
 import type { Category, Task, User, TaskTeam } from '@/types';
@@ -39,6 +40,7 @@ export const TaskCatalog: React.FC = () => {
   const [deadlineBefore, setDeadlineBefore] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const [isOwnerModalOpen, setIsOwnerModalOpen] = useState(false);
@@ -113,7 +115,13 @@ export const TaskCatalog: React.FC = () => {
 
   const handleOpenModal = (task: Task) => {
     setSelectedTask(task);
+    setIsDetailsModalOpen(false); // Close details if opening application
     setIsModalOpen(true);
+  };
+
+  const handleOpenDetails = (task: Task) => {
+    setSelectedTask(task);
+    setIsDetailsModalOpen(true);
   };
 
   const handleOpenOwnerProfile = (owner?: User) => {
@@ -269,12 +277,15 @@ export const TaskCatalog: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex justify-between items-start mb-4">
-                  <div>
+                <div 
+                  className="flex justify-between items-start mb-4 cursor-pointer group/title"
+                  onClick={() => handleOpenDetails(task)}
+                >
+                  <div className="flex-1">
                     <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-1 bg-primary-100/50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 rounded-md">
                       {task.category?.name || 'Общее'}
                     </span>
-                    <h3 className="text-xl font-bold mt-2 text-surface-900 dark:text-white leading-tight">{task.title}</h3>
+                    <h3 className="text-xl font-bold mt-2 text-surface-900 dark:text-white leading-tight group-hover/title:text-primary-600 transition-colors">{task.title}</h3>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-xl font-black text-green-500 dark:text-green-400">
@@ -283,7 +294,12 @@ export const TaskCatalog: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-surface-600 dark:text-surface-400 mb-3 text-sm line-clamp-3">{task.description}</p>
+                <p 
+                  className="text-surface-600 dark:text-surface-400 mb-3 text-sm line-clamp-3 cursor-pointer hover:text-surface-900 dark:hover:text-surface-200 transition-colors"
+                  onClick={() => handleOpenDetails(task)}
+                >
+                  {task.description}
+                </p>
 
                 {task.acceptance_criteria && (
                   <div className="mb-2 text-xs text-surface-600 dark:text-surface-300 flex items-start gap-1.5">
@@ -365,9 +381,19 @@ export const TaskCatalog: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <Button size="sm" onClick={() => handleOpenModal(task)} className="rounded-full px-6">
-                    Откликнуться
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleOpenDetails(task)}
+                      className="text-xs font-bold"
+                    >
+                      Подробнее
+                    </Button>
+                    <Button size="sm" onClick={() => handleOpenModal(task)} className="rounded-full px-6 shadow-md shadow-primary-500/10">
+                      Откликнуться
+                    </Button>
+                  </div>
                 </div>
               </Card>
             </motion.div>
@@ -377,14 +403,22 @@ export const TaskCatalog: React.FC = () => {
       )}
 
       {selectedTask && (
-        <ApplicationModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={handleApplySuccess}
-          taskId={selectedTask.id}
-          taskTitle={selectedTask.title}
-          points={selectedTask.points_reward}
-        />
+        <>
+          <ApplicationModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSuccess={handleApplySuccess}
+            taskId={selectedTask.id}
+            taskTitle={selectedTask.title}
+            points={selectedTask.points_reward}
+          />
+          <TaskDetailsModal
+            isOpen={isDetailsModalOpen}
+            onClose={() => setIsDetailsModalOpen(false)}
+            onApply={handleOpenModal}
+            task={selectedTask}
+          />
+        </>
       )}
 
       <UserProfileModal

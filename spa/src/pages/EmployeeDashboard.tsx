@@ -26,7 +26,7 @@ export const EmployeeDashboard: React.FC = () => {
       try {
         const [statsRes, activityRes] = await Promise.all([
           apiClient.get<DashboardStats>('/tasks/stats'),
-          apiClient.get<Activity[]>('/tasks/activity')
+          apiClient.get<Activity[]>('/tasks/activity?limit=5')
         ]);
         setStats(statsRes.data);
         setActivities(activityRes.data);

@@ -58,6 +58,18 @@ class ApplicationStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class ActivityType(str, Enum):
+    TASK_CREATED = "task_created"
+    TASK_APPROVED = "task_approved"
+    TASK_REJECTED = "task_rejected"
+    NEW_APPLICATION = "new_application"
+    APPLICATION_ACCEPTED = "application_accepted"
+    APPLICATION_REJECTED = "application_rejected"
+    WORK_SUBMITTED = "work_submitted"
+    WORK_APPROVED = "work_approved"
+    WORK_REJECTED = "work_rejected"
+
+
 class User(DeclBase):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -279,6 +291,21 @@ class FAQArticle(DeclBase):
     is_published = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
     updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+
+
+class ActivityLog(DeclBase):
+    __tablename__ = "activity_log"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
+    actor_id = Column(Integer, ForeignKey("user.id"), nullable=True)
+    task_id = Column(Integer, ForeignKey("task.id"), nullable=True)
+    activity_type = Column(SQLAlchemyEnum(ActivityType), nullable=False)
+    content = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
+    user = relationship("User", foreign_keys=[user_id])
+    actor = relationship("User", foreign_keys=[actor_id])
+    task = relationship("Task")
 
 
 async def create_tables(engine: AsyncEngine):

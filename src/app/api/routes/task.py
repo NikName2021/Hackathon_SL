@@ -7,8 +7,9 @@ from core.config import async_get_db, logger
 from schemas.task import (
     TaskCreate, TaskResponse, ApplicationCreate, ApplicationResponse, 
     SubmissionCreate, SubmissionResponse, TaskReview, DashboardStats, TaskUpdate,
-    RecommendedTaskResponse, TaskAttachmentResponse, TaskReject
+    RecommendedTaskResponse, TaskAttachmentResponse, TaskReject, ActivityResponse
 )
+from repositories.activity import ActivityLogRepository
 from services.task_service import TaskService
 from services.recommendation_service import RecommendationService
 from helpers.auth import get_current_user, RoleChecker, get_current_user_optional
@@ -130,6 +131,19 @@ async def get_dashboard_stats(
     return stats
 
 
+@router.get("/activity", response_model=List[ActivityResponse])
+async def get_activity_feed(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(async_get_db)
+):
+    """
+    Получить последние уведомления и изменения статусов для пользователя.
+    Для сотрудника: новые отклики, сданные работы.
+    Для студента: одобренные отклики, принятые задачи.
+    """
+    return await ActivityLogRepository.get_recent_for_user(db, current_user.id)
+
+
 @router.post("/{task_id}/approve", response_model=TaskResponse)
 async def approve_task(
     task_id: int,
@@ -232,3 +246,4 @@ async def delete_attachment(
     db: AsyncSession = Depends(async_get_db)
 ):
     return await TaskService.delete_attachment(attachment_id, db)
+

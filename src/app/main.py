@@ -43,7 +43,13 @@ def get_application() -> FastAPI:
         application.add_event_handler("startup", create_start_app_handler(application))
 
     @application.on_event("startup")
-    async def startup_seed():
+    async def startup_db_init():
+        # Ensure schema exists
+        from core.config import engine
+        from database import create_tables
+        await create_tables(engine)
+        
+        # Seed categories and demo data if configured
         async with sessionmaker() as session:
             await seed_categories(session)
             await seed_demo_data(session)

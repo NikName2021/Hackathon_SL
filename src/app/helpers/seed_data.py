@@ -14,6 +14,11 @@ from database.all_models import (
     TaskStatus,
     TaskSubmission,
     User,
+    Skill,
+    Achievement,
+    ActivityLog,
+    ActivityType,
+    FAQArticle
 )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -230,5 +235,107 @@ async def seed_demo_data(session: AsyncSession):
             ),
         ]
     )
+
+    # 5. NEW: Skills & Achievements
+    skills_stmt = select(Skill)
+    if not (await session.execute(skills_stmt)).scalars().first():
+        default_skills = ["Python", "React", "SQL", "UI/UX Design", "Copywriting", "Project Management", "Research"]
+        for s_name in default_skills:
+            session.add(Skill(name=s_name))
+        await session.flush()
+
+    ach_stmt = select(Achievement)
+    if not (await session.execute(ach_stmt)).scalars().first():
+        achs = [
+            ("Первопроходец", "Выполнена первая задача на платформе", "zap"),
+            ("Гуру кода", "Завершено более 5 IT-задач", "code"),
+            ("Лидер мнений", "Топ-3 в лидерборде за месяц", "star")
+        ]
+        for name, desc, icon in achs:
+            session.add(Achievement(name=name, description=desc, icon_type=icon))
+        await session.flush()
+
+    # 6. ENHANCED Activity Logs
+    # This will populate the "Recent Activity" feed for the employee
+    activities_stmt = select(ActivityLog).limit(1)
+    if not (await session.execute(activities_stmt)).scalars().first():
+        # Add some historical context
+        past_date = now - timedelta(hours=5)
+        
+        # New applications activities
+        session.add(ActivityLog(
+            user_id=employee.id,
+            actor_id=student.id,
+            task_id=open_task.id,
+            activity_type=ActivityType.NEW_APPLICATION,
+            created_at=past_date
+        ))
+        
+        session.add(ActivityLog(
+            user_id=employee.id,
+            actor_id=student.id,
+            task_id=review_task.id,
+            activity_type=ActivityType.WORK_SUBMITTED,
+            created_at=past_date + timedelta(minutes=30),
+            content="Сделал верстку по макету, проверил адаптивность."
+        ))
+
+        # Moderation activities
+        session.add(ActivityLog(
+            user_id=employee.id,
+            task_id=in_progress_task.id,
+            activity_type=ActivityType.TASK_APPROVED,
+            created_at=past_date - timedelta(hours=10)
+        ))
+
+    # 7. NEW: FAQ Articles
+    faq_stmt = select(FAQArticle).limit(1)
+    if not (await session.execute(faq_stmt)).scalars().first():
+        faq_items = [
+            # General
+            {
+                "title": "Что такое баллы и зачем они нужны?",
+                "slug": "what-are-points",
+                "content": "Баллы — это внутренняя валюта платформы. Вы получаете их за выполнение задач и можете обменивать на бонусы от университета или партнеров.",
+                "target_role": None
+            },
+            {
+                "title": "Как работает система репутации?",
+                "slug": "reputation-system",
+                "content": "Репутация отражает вашу надежность. Она растет при успешном выполнении задач в срок и падает при нарушениях дедлайнов или отказе от работы.",
+                "target_role": None
+            },
+            # Student specific
+            {
+                "title": "Как откликнуться на задачу?",
+                "slug": "how-to-apply",
+                "content": "Выберите подходящую задачу в каталоге, нажмите 'Откликнуться' и напишите краткое сопроводительное письмо о своих навыках.",
+                "target_role": Role.STUDENT
+            },
+            {
+                "title": "Когда я получу баллы за работу?",
+                "slug": "when-points-awarded",
+                "content": "Баллы начисляются автоматически сразу после того, как заказчик примет вашу работу и переведет задачу в статус 'Завершена'.",
+                "target_role": Role.STUDENT
+            },
+            # Employee specific
+            {
+                "title": "Как создать эффективную задачу?",
+                "slug": "create-effective-task",
+                "content": "Подробно опишите требования и критерии приемки. Указывайте нужные навыки, чтобы система точнее рекомендовала вашу задачу студентам.",
+                "target_role": Role.EMPLOYEE
+            },
+            {
+                "title": "Как выбрать лучшего исполнителя?",
+                "slug": "choosing-performer",
+                "content": "Обращайте внимание на репутацию студента и его предыдущие работы. Также вы можете пообщаться с кандидатом в чате перед подтверждением.",
+                "target_role": Role.EMPLOYEE
+            }
+        ]
+        
+        for item in faq_items:
+            session.add(FAQArticle(**item))
+        
+        await session.flush()
 
     await session.commit()

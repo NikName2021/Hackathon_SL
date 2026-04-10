@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/api/client';
-import type { DashboardStats } from '@/types';
+import type { DashboardStats, Activity } from '@/types';
 import { 
   PlusCircle, 
   Users, 
@@ -18,15 +18,20 @@ import { motion } from 'framer-motion';
 
 export const EmployeeDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await apiClient.get<DashboardStats>('/tasks/stats');
-        setStats(response.data);
+        const [statsRes, activityRes] = await Promise.all([
+          apiClient.get<DashboardStats>('/tasks/stats'),
+          apiClient.get<Activity[]>('/tasks/activity')
+        ]);
+        setStats(statsRes.data);
+        setActivities(activityRes.data);
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        console.error('Failed to fetch dashboard data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -80,6 +85,50 @@ export const EmployeeDashboard: React.FC = () => {
       link: '/tasks/my'
     }
   ];
+
+  const getActivityInfo = (activity: Activity) => {
+    const actorName = activity.actor?.full_name || 'Студент';
+    const taskTitle = activity.task?.title || 'задача';
+
+    switch (activity.activity_type) {
+      case 'task_created':
+        return {
+          icon: <PlusCircle className="w-4 h-4 text-primary-500" />,
+          text: `Вы создали задачу "${taskTitle}"`,
+          color: 'bg-primary-50 dark:bg-primary-900/10'
+        };
+      case 'task_approved':
+        return {
+          icon: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+          text: `Задача "${taskTitle}" одобрена модератором и теперь видна всем`,
+          color: 'bg-green-50 dark:bg-green-900/10'
+        };
+      case 'task_rejected':
+        return {
+          icon: <AlertCircle className="w-4 h-4 text-red-500" />,
+          text: `Задача "${taskTitle}" отклонена: ${activity.content}`,
+          color: 'bg-red-50 dark:bg-red-900/10'
+        };
+      case 'new_application':
+        return {
+          icon: <Users className="w-4 h-4 text-blue-500" />,
+          text: `${actorName} откликнулся на вашу задачу "${taskTitle}"`,
+          color: 'bg-blue-50 dark:bg-blue-900/10'
+        };
+      case 'work_submitted':
+        return {
+          icon: <FileCheck className="w-4 h-4 text-yellow-500" />,
+          text: `${actorName} представил решение по задаче "${taskTitle}"`,
+          color: 'bg-yellow-50 dark:bg-yellow-900/10'
+        };
+      default:
+        return {
+          icon: <Clock className="w-4 h-4 text-surface-400" />,
+          text: `Новое событие в системе`,
+          color: 'bg-surface-50 dark:bg-surface-800'
+        };
+    }
+  };
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto">
@@ -143,16 +192,47 @@ export const EmployeeDashboard: React.FC = () => {
             <Clock className="w-5 h-5 text-primary-500" />
             Недавняя активность
           </h3>
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 text-sm text-surface-500 italic pb-4 border-b border-surface-100 dark:border-surface-800">
-              <AlertCircle className="w-4 h-4" />
-              История активности будет доступна после выполнения первых действий.
-            </div>
-            <div className="bg-surface-50 dark:bg-surface-800/50 rounded-2xl p-6 text-center">
-              <p className="text-surface-500 text-sm">
-                Здесь будет отображаться список последних откликов и изменений статусов ваших задач.
-              </p>
-            </div>
+          <div className="space-y-4">
+            {activities.length > 0 ? (
+              activities.map((activity, index) => {
+                const info = getActivityInfo(activity);
+                return (
+                  <motion.div
+                    key={activity.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-start gap-4 p-4 rounded-2xl hover:bg-surface-50 dark:hover:bg-white/5 transition-colors group"
+                  >
+                    <div className={`${info.color} p-2.5 rounded-xl group-hover:scale-110 transition-transform`}>
+                      {info.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-surface-900 dark:text-white leading-snug">
+                        {info.text}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-bold text-surface-400 uppercase tracking-wider">
+                          {new Date(activity.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <>
+                <div className="flex items-center gap-4 text-sm text-surface-500 italic pb-4 border-b border-surface-100 dark:border-surface-800">
+                  <AlertCircle className="w-4 h-4" />
+                  История активности будет доступна после выполнения первых действий.
+                </div>
+                <div className="bg-surface-50 dark:bg-surface-800/50 rounded-2xl p-6 text-center">
+                  <p className="text-surface-500 text-sm">
+                    Здесь будет отображаться список последних откликов и изменений статусов ваших задач.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </Card>
 

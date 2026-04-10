@@ -1,7 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from database.all_models import TaskStatus, ApplicationStatus, Role
+from database.all_models import TaskStatus, ApplicationStatus, Role, ActivityType
 from .team import TeamResponse
 
 
@@ -204,4 +204,17 @@ class ProfileResponse(BaseModel):
     points: int
     reputation: float
     history: List[PointTransactionResponse]
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ActivityResponse(BaseModel):
+    id: int
+    user_id: int
+    actor_id: Optional[int] = None
+    actor: Optional[UserShortResponse] = None
+    task_id: Optional[int] = None
+    task: Optional[TaskShortResponse] = None
+    activity_type: ActivityType
+    content: Optional[str] = None
+    created_at: datetime
     model_config = ConfigDict(from_attributes=True)

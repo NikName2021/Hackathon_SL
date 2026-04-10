@@ -201,3 +201,15 @@ export interface FAQArticle {
   created_at: string;
   updated_at: string;
 }
+
+export interface Activity {
+  id: number;
+  user_id: number;
+  actor_id?: number;
+  actor?: User;
+  task_id?: number;
+  task?: { id: number; title: string };
+  activity_type: string;
+  content?: string;
+  created_at: string;
+}

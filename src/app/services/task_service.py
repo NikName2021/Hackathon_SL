@@ -22,7 +22,8 @@ from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, TaskRe
 from schemas.team import TeamCreate
 from services.gamification_service import GamificationService
 from sqlalchemy import select, func
-from database.all_models import Task, TaskSubmission, TaskApplication
+from database.all_models import Task, TaskSubmission, TaskApplication, ActivityType
+from repositories.activity import ActivityLogRepository
 
 
 class TaskService:
@@ -44,6 +45,8 @@ class TaskService:
     async def create_task(task_data: TaskCreate, owner_id: int, session: AsyncSession):
         dto = TaskCreateDTO(**task_data.model_dump(exclude={"skills"}), owner_id=owner_id)
         task = await TaskRepository.create(dto, session, skill_names=task_data.skills)
+        # Log activity: New task created (for owner info)
+        await ActivityLogRepository.create(session, owner_id, ActivityType.TASK_CREATED, actor_id=owner_id, task_id=task.id)
         return await TaskRepository.update_status(task.id, TaskStatus.PENDING_APPROVAL, session)
 
     @staticmethod
@@ -84,6 +87,10 @@ class TaskService:
         task = await TaskService._get_task_or_404(task_id, session)
         if task.status != TaskStatus.PENDING_APPROVAL:
             raise HTTPException(status_code=400, detail="Only pending tasks can be approved")
+        
+        # Log activity: Task approved
+        await ActivityLogRepository.create(session, task.owner_id, ActivityType.TASK_APPROVED, task_id=task.id)
+        
         return await TaskRepository.update_status(task_id, TaskStatus.OPEN, session)
 
     @staticmethod
@@ -91,6 +98,10 @@ class TaskService:
         task = await TaskService._get_task_or_404(task_id, session)
         if task.status not in {TaskStatus.PENDING_APPROVAL, TaskStatus.OPEN}:
             raise HTTPException(status_code=400, detail="Task cannot be rejected in current status")
+            
+        # Log activity: Task rejected
+        await ActivityLogRepository.create(session, task.owner_id, ActivityType.TASK_REJECTED, task_id=task.id, content=reason)
+        
         return await TaskRepository.update_status(task_id, TaskStatus.CANCELLED, session, reason=reason)
 
     @staticmethod
@@ -219,7 +230,12 @@ class TaskService:
             # Update team status to applied
             await TeamRepository.update_status(app_data.team_id, "applied", session)
 
-        return await ApplicationRepository.create(task_id, student_id, app_data.message, session, team_id=app_data.team_id)
+        app = await ApplicationRepository.create(task_id, student_id, app_data.message, session, team_id=app_data.team_id)
+        
+        # Log activity: New application for owner
+        await ActivityLogRepository.create(session, task.owner_id, ActivityType.NEW_APPLICATION, actor_id=student_id, task_id=task.id)
+        
+        return app
 
     @staticmethod
     async def approve_student(app_id: int, owner_id: int, session: AsyncSession):
@@ -245,6 +261,10 @@ class TaskService:
             await TaskRepository.assign_student(task.id, app.student_id, session)
             
         await TaskRepository.update_status(task.id, TaskStatus.IN_PROGRESS, session)
+        
+        # Log activity: Application accepted
+        await ActivityLogRepository.create(session, app.student_id, ActivityType.APPLICATION_ACCEPTED, actor_id=owner_id, task_id=task.id)
+        
         return accepted
 
     @staticmethod
@@ -256,6 +276,9 @@ class TaskService:
             raise HTTPException(status_code=403, detail="Only task owner can reject")
         if app.status != ApplicationStatus.PENDING:
             raise HTTPException(status_code=400, detail="Application is not pending")
+
+        # Log activity: Application rejected
+        await ActivityLogRepository.create(session, app.student_id, ActivityType.APPLICATION_REJECTED, actor_id=owner_id, task_id=task.id)
 
         return await ApplicationRepository.update_status(app_id, ApplicationStatus.REJECTED, session)
 
@@ -269,6 +292,10 @@ class TaskService:
 
         submission = await SubmissionRepository.create(task_id, student_id, submission_data.content, session)
         await TaskRepository.update_status(task_id, TaskStatus.REVIEW, session)
+        
+        # Log activity: Work submitted
+        await ActivityLogRepository.create(session, task.owner_id, ActivityType.WORK_SUBMITTED, actor_id=student_id, task_id=task.id)
+        
         return submission
 
     @staticmethod
@@ -316,6 +343,9 @@ class TaskService:
         else:
             await SubmissionRepository.update_review(submission.id, "rejected", review_data.feedback, session)
             await TaskRepository.update_status(task_id, TaskStatus.IN_PROGRESS, session)
+            
+            # Log activity: Work rejected
+            await ActivityLogRepository.create(session, submission.student_id, ActivityType.WORK_REJECTED, actor_id=owner_id, task_id=task.id, content=review_data.feedback)
 
         return await TaskRepository.get_by_id(task_id, session)
 

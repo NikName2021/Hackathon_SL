@@ -7,7 +7,6 @@ import {
   Tag, 
   User as UserIcon, 
   CheckCircle2, 
-  AlertCircle, 
   Paperclip, 
   Download,
   FileText,

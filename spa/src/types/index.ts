@@ -84,6 +84,7 @@ export interface Task {
   performer_requirements?: string;
   category: Category;
   owner: User;
+  assignee?: User;
   applications?: TaskApplication[];
   points_reward: number;
   status: TaskStatus;

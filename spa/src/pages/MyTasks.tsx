@@ -220,6 +220,24 @@ export const MyTasks: React.FC = () => {
                               <span>До {new Date(task.deadline).toLocaleDateString()}</span>
                             </div>
                           )}
+                          
+                          {/* Performer display for Owner */}
+                          {!isStudent && task.assignee && (
+                            <div className="flex items-center gap-2 py-1 px-2 bg-primary-50 dark:bg-primary-900/10 rounded-lg border border-primary-100 dark:border-primary-500/10 ml-auto md:ml-0">
+                              <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-800 flex items-center justify-center overflow-hidden border border-primary-200 dark:border-primary-700">
+                                {task.assignee.avatar_url ? (
+                                  <img src={task.assignee.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-[10px] font-bold text-primary-600 dark:text-primary-400">
+                                    {task.assignee.full_name?.charAt(0) || 'U'}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs font-semibold text-primary-700 dark:text-primary-300">
+                                {task.assignee.full_name}
+                              </span>
+                            </div>
+                          )}
                         </div>
                     </div>
                   </div>

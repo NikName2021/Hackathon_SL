@@ -145,6 +145,7 @@ class TaskResponse(BaseModel):
     is_confidential: bool = False
     created_date: datetime
     owner: UserShortResponse
+    assignee: Optional[UserShortResponse] = None
     category: CategoryResponse | None = None
     rejection_reason: str | None = None
     applications: List[ApplicationResponse] = []

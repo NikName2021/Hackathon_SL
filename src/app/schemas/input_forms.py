@@ -22,8 +22,8 @@ class UserCreate(BaseModel):
             raise ValueError("Пароль должен содержать хотя бы одну строчную букву")
         if not re.search(r"\d", v):
             raise ValueError("Пароль должен содержать хотя бы одну цифру")
-        if not re.search(r"[@#$%^&*_!]", v):
-            raise ValueError("Пароль должен содержать хотя бы один специальный символ (@#$%^&*_!)")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
+            raise ValueError("Пароль должен содержать хотя бы один специальный символ (например, !@#$%^&*)")
         return v
 
 

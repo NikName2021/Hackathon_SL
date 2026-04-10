@@ -41,7 +41,14 @@ export const Register: React.FC = () => {
         navigate('/');
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Ошибка регистрации.');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        // Handle FastAPI validation errors (422)
+        const messages = detail.map((d: any) => d.msg.replace('Value error, ', ''));
+        setError(messages.join('. '));
+      } else {
+        setError(detail || 'Ошибка регистрации.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +166,7 @@ export const Register: React.FC = () => {
                 />
                 <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-[38px]" />
                 <p className="mt-1 text-[10px] text-surface-500 font-medium">
-                  Минимум 8 символов, заглавная буква, цифра и спецсимвол (@#$%^&*!)
+                  Минимум 8 символов, заглавная буква, цифра и спецсимвол
                 </p>
               </div>
             </div>

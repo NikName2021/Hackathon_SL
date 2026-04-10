@@ -33,3 +33,4 @@ src/tmp/
 logs/
 /src/app/uploads/
 .env.example
+/src/app/protected_storage/

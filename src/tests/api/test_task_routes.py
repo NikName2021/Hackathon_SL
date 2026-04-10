@@ -8,7 +8,7 @@ from database.all_models import Role
 
 @pytest.mark.asyncio
 async def test_get_tasks(test_client: AsyncClient):
-    with patch("services.task_service.TaskService.get_available_tasks") as mock_get:
+    with patch("services.task_service.TaskService.get_available_tasks_filtered") as mock_get:
         mock_get.return_value = [
             {
                 "id": 1,
@@ -18,8 +18,12 @@ async def test_get_tasks(test_client: AsyncClient):
                 "points_reward": 5,
                 "deadline": "2026-12-31T23:59:59",
                 "created_date": "2026-04-01T12:00:00",
+                "is_confidential": False,
                 "owner": {"id": 2, "email": "emp@t.com", "role": "employee", "points": 0, "reputation": 0, "full_name": "Emp User", "is_active": True},
-                "category": {"id": 1, "name": "Chores"}
+                "category": {"id": 1, "name": "Chores"},
+                "skills": [],
+                "attachments": [],
+                "applications": []
             }
         ]
         

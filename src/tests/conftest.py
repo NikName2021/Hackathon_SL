@@ -11,7 +11,11 @@ from database.all_models import User, Role
 @pytest_asyncio.fixture
 async def mock_db_session():
     """Provides a mocked AsyncSession for database dependency injection."""
+    from unittest.mock import MagicMock
     session_mock = AsyncMock()
+    session_mock.add = MagicMock()
+    session_mock.add_all = MagicMock()
+    session_mock.delete = MagicMock()
     return session_mock
 
 @pytest_asyncio.fixture
@@ -37,7 +41,8 @@ def mock_student_user():
         role=Role.STUDENT,
         points=0,
         reputation=0.0,
-        is_active=True
+        is_active=True,
+        is_verified=True
     )
 
 @pytest.fixture
@@ -50,7 +55,8 @@ def mock_employee_user():
         role=Role.EMPLOYEE,
         points=0,
         reputation=0.0,
-        is_active=True
+        is_active=True,
+        is_verified=True
     )
 
 @pytest.fixture
@@ -63,5 +69,6 @@ def mock_admin_user():
         role=Role.ADMIN,
         points=0,
         reputation=0.0,
-        is_active=True
+        is_active=True,
+        is_verified=True
     )

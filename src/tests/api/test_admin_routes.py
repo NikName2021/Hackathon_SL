@@ -22,6 +22,11 @@ async def test_admin_analytics_success(test_client: AsyncClient, mock_admin_user
     
     mock_db_session.scalar.return_value = 10
     
+    from unittest.mock import MagicMock
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db_session.execute.return_value = mock_result
+    
     response = await test_client.get("/api/v1/admin/analytics")
     
     assert response.status_code == 200

@@ -46,8 +46,8 @@ async def test_register_route(test_client: AsyncClient):
             assert response.status_code == 200
             data = response.json()
             assert data["user"]["email"] == "new@test.com"
-            assert data["token"]["access_token"] == "fake_access"
-            assert "refresh_token" in response.cookies
+            assert data["token"]["access_token"] == "verification_required"
+
 
 @pytest.mark.asyncio
 async def test_login_route(test_client: AsyncClient):

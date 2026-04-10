@@ -1,5 +1,6 @@
 import uvicorn
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +15,25 @@ from middleware import LoggingMiddleware
 origins = ["*"]
 
 
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    if MEMOIZATION_FLAG:
+        handler = create_start_app_handler(application)
+        await handler()
+
+    # Ensure schema exists
+    from core.config import engine
+    from database import create_tables
+    await create_tables(engine)
+
+    # Seed categories and demo data if configured
+    async with sessionmaker() as session:
+        await seed_categories(session)
+        await seed_demo_data(session)
+
+    yield
+
+
 def get_application() -> FastAPI:
     application = FastAPI(
         title=PROJECT_NAME,
@@ -21,6 +41,7 @@ def get_application() -> FastAPI:
         version=VERSION,
         docs_url="/docs",
         redoc_url=None,
+        lifespan=lifespan,
     )
     application.include_router(api_router, prefix=API_PREFIX)
     application.add_middleware(LoggingMiddleware)
@@ -38,21 +59,6 @@ def get_application() -> FastAPI:
     
     # Mount static files
     application.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
-    if MEMOIZATION_FLAG:
-        application.add_event_handler("startup", create_start_app_handler(application))
-
-    @application.on_event("startup")
-    async def startup_db_init():
-        # Ensure schema exists
-        from core.config import engine
-        from database import create_tables
-        await create_tables(engine)
-        
-        # Seed categories and demo data if configured
-        async with sessionmaker() as session:
-            await seed_categories(session)
-            await seed_demo_data(session)
 
     return application
 

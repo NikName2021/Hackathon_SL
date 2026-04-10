@@ -1,11 +1,11 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
 
 from database.all_models import ApplicationStatus, Task, TaskApplication, TaskStatus, TaskSubmission
-from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, build_application_response, build_task_response
+from schemas.task import ApplicationCreate, SubmissionCreate, TaskCreate, TaskResponse, ApplicationResponse
 from services.task_service import TaskService
 
 
@@ -19,6 +19,7 @@ def mock_task():
         owner_id=2,
         status=TaskStatus.PENDING_APPROVAL,
         points_reward=10,
+        is_confidential=False,
     )
 
 
@@ -55,6 +56,7 @@ async def test_create_task(mock_db_session, mock_task):
         mock_create.return_value = mock_task
 
         with patch("repositories.task.TaskRepository.update_status", new_callable=AsyncMock) as mock_update_status:
+            mock_update_status.return_value = mock_task
             result = await TaskService.create_task(task_data, owner_id=2, session=mock_db_session)
 
             assert result.id == 1
@@ -106,7 +108,7 @@ async def test_approve_student_assigns_executor_and_rejects_rest(mock_db_session
                 with patch("repositories.task.TaskRepository.assign_student", new_callable=AsyncMock) as mock_assign:
                     with patch("repositories.task.ApplicationRepository.reject_pending_for_task_except", new_callable=AsyncMock) as mock_reject:
                         with patch("repositories.task.TaskRepository.update_status", new_callable=AsyncMock) as mock_update_task:
-                            mock_update_app.return_value = mock_application
+                            mock_update_app.return_value = accepted_application
                             mock_update_task.return_value = mock_task
 
                             result = await TaskService.approve_student(1, 2, mock_db_session)
@@ -119,14 +121,14 @@ async def test_approve_student_assigns_executor_and_rejects_rest(mock_db_session
 
 
 @pytest.mark.asyncio
-async def test_build_task_response_uses_latest_submission(mock_task):
+async def test_task_response_serialization(mock_task, mock_admin_user):
     older = TaskSubmission(
         id=1,
         task_id=mock_task.id,
         student_id=1,
         content="old",
         status="reviewing",
-        submitted_at=datetime.now(UTC) - timedelta(days=1),
+        submitted_at=datetime.now(timezone.utc) - timedelta(days=1),
     )
     newer = TaskSubmission(
         id=2,
@@ -134,11 +136,16 @@ async def test_build_task_response_uses_latest_submission(mock_task):
         student_id=1,
         content="new",
         status="approved",
-        submitted_at=datetime.now(UTC),
+        submitted_at=datetime.now(timezone.utc),
     )
     mock_task.submissions = [older, newer]
+    mock_task.created_date = datetime.now()
+    mock_task.skills = []
+    mock_task.attachments = []
+    mock_task.owner = mock_admin_user
+    mock_task.category = None
 
-    result = build_task_response(mock_task)
+    result = TaskResponse.model_validate(mock_task)
 
     assert result.latest_submission is not None
     assert result.latest_submission.id == 2
@@ -146,15 +153,16 @@ async def test_build_task_response_uses_latest_submission(mock_task):
 
 
 @pytest.mark.asyncio
-async def test_build_application_response_uses_task_summary(mock_task, mock_application):
+async def test_application_response_serialization(mock_task, mock_application, mock_student_user):
     mock_application.task = mock_task
-    mock_application.student = None
+    mock_application.student = mock_student_user
+    mock_application.created_at = datetime.now()
 
-    result = build_application_response(mock_application)
+    result = ApplicationResponse.model_validate(mock_application)
 
     assert result.task.id == mock_task.id
     assert result.task.title == mock_task.title
-    assert result.student.id == 0
+    assert result.student.id == mock_student_user.id
 
 
 @pytest.mark.asyncio
@@ -174,7 +182,7 @@ async def test_apply_for_task_success(mock_db_session, mock_task, mock_applicati
                 result = await TaskService.apply_for_task(1, 1, app_data, mock_db_session)
 
                 assert result.status == ApplicationStatus.PENDING
-                assert result.task.id == mock_task.id
+                assert result.task_id == 1
 
 
 @pytest.mark.asyncio
